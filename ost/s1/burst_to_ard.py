@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from ost.helpers import helpers as h
+from ost.helpers.errors import GPTRuntimeError
 from ost.generic import common_wrappers as common
 from ost.s1 import slc_wrappers as slc
 
@@ -295,18 +296,14 @@ def create_coherence_layers(
             file.write('passed all tests \n')
 
 
-def burst_to_ard(burst, config_file):
-
-    # this is a godale thing
+def burst_to_ard(burst, config_dict):
+    # no this is gdf thing (id, gdf_row)
     if isinstance(burst, tuple):
         i, burst = burst
 
-    # load relevant config parameters
-    with open(config_file, 'r') as file:
-        config_dict = json.load(file)
-        ard = config_dict['processing']['single_ARD']
-        temp_dir = Path(config_dict['temp_dir'])
-        cpus = config_dict['cpus_per_process']
+    ard = config_dict['processing']['single_ARD']
+    temp_dir = Path(config_dict['temp_dir'])
+    cpus = config_dict['cpus_per_process']
 
     # creation of out_directory
     out_dir = Path(burst.out_directory)
@@ -358,7 +355,7 @@ def burst_to_ard(burst, config_file):
             )
             if return_code != 0:
                 h.delete_dimap(master_import)
-                return return_code
+                raise GPTRuntimeError('Something with importing went wrong!')
 
         # ---------------------------------------------------------------------
         # 2 Product Generation
@@ -389,7 +386,7 @@ def burst_to_ard(burst, config_file):
 
             if return_code != 0:
                 h.remove_folder_content(temp_dir)
-                return return_code
+                raise GPTRuntimeError('Something with coherence generation went wrong!')
 
             create_coherence_layers(
                 f'{master_import}.dim', f'{slave_import}.dim', out_dir,
@@ -398,83 +395,3 @@ def burst_to_ard(burst, config_file):
         else:
             # remove master import
             h.delete_dimap(master_import)
-
-
-if __name__ == "__main__":
-
-    import argparse
-
-    # write a description
-    descript = """
-               This is a command line client for the creation of
-               Sentinel-1 ARD data from Level 1 SLC bursts
-
-               to do
-               """
-
-    epilog = """
-             Example:
-             to do
-
-
-             """
-
-    # create a parser
-    parser = argparse.ArgumentParser(description=descript, epilog=epilog)
-
-    # search paramenters
-    parser.add_argument('-m', '--master',
-                        help=' (str) path to the master SLC',
-                        required=True)
-    parser.add_argument('-ms', '--master_swath',
-                        help=' (str) The subswath of the master SLC',
-                        required=True)
-    parser.add_argument('-mn', '--master_burst_nr',
-                        help=' (int) The index number of the master burst',
-                        required=True)
-    parser.add_argument('-mi', '--master_burst_id',
-                        help=' (str) The OST burst id of the master burst')
-    parser.add_argument('-o', '--out_directory',
-                        help='The directory where the outputfiles will'
-                             ' be written to.',
-                        required=True)
-    parser.add_argument('-t', '--temp_directory',
-                        help='The directory where temporary files will'
-                             ' be written to.',
-                        required=True)
-    parser.add_argument('-s', '--slave',
-                        help=' (str) path to the slave SLC',
-                        default=False)
-    parser.add_argument('-sn', '--slave_burst_nr',
-                        help=' (int) The index number of the slave burst',
-                        default=False)
-    parser.add_argument('-si', '--slave_burst_id',
-                        help=' (str) The OST burst id of the slave burst',
-                        default=False)
-    parser.add_argument('-c', '--coherence',
-                        help=' (bool) Set to True if the interferometric '
-                        'coherence should be calculated.',
-                        default=False)
-    parser.add_argument('-p', '--proc_file',
-                        help=' (str/path) Path to ARDprocessing parameters file',
-                        required=True)
-    parser.add_argument('-rsi', '--remove_slave_import',
-                        help=' (bool) Select if during the coherence'
-                             ' calculation the imported slave file should be'
-                             ' deleted (for time-series it is advisable to'
-                             ' keep it)',
-                        default=False)
-    parser.add_argument('-nc', '--cpu_cores',
-                        help=' (int) Select the number of cpu cores'
-                             ' for running each gpt process'
-                             'if you wish to specify for parallelisation',
-                        default=False)
-
-    args = parser.parse_args()
-
-    # execute processing
-    burst_to_ard(args.master, args.master_swath, args.master_burst_nr, 
-                 args.master_burst_id, args.proc_file, args.out_directory, args.temp_directory,
-                 args.slave, args.slave_burst_nr, args.slave_burst_id,
-                 args.coherence, args.remove_slave_import,args.cpu_cores
-                 )

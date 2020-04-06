@@ -4,6 +4,8 @@ import logging
 from pathlib import Path
 import geopandas as gpd
 
+from shapely.geometry import box
+
 from ost.helpers import scihub, vector as vec
 from ost import Sentinel1Scene as S1Scene
 
@@ -224,3 +226,31 @@ def prepare_burst_inventory(burst_gdf, config_file):
     return proc_burst_gdf
 
 
+def get_bursts_by_polygon(master_annotation, out_poly=None):
+    master_bursts = master_annotation
+
+    bursts_dict = {'IW1': [], 'IW2': [], 'IW3': []}
+    for subswath, nr, id, b in zip(
+            master_bursts['SwathID'],
+            master_bursts['BurstNr'],
+            master_bursts['AnxTime'],
+            master_bursts['geometry']
+    ):
+        # Return all burst combinations if out poly is None
+        if out_poly is None:
+            if (nr, id) not in bursts_dict[subswath]:
+                b_bounds = b.bounds
+                burst_buffer = abs(b_bounds[2]-b_bounds[0])/75
+                burst_bbox = box(
+                    b_bounds[0], b_bounds[1], b_bounds[2], b_bounds[3]
+                ).buffer(burst_buffer).envelope
+                bursts_dict[subswath].append((nr, id, burst_bbox))
+        elif b.intersects(out_poly):
+            if (nr, id) not in bursts_dict[subswath]:
+                b_bounds = b.bounds
+                burst_buffer = abs(out_poly.bounds[2]-out_poly.bounds[0])/75
+                burst_bbox = box(
+                    b_bounds[0], b_bounds[1], b_bounds[2], b_bounds[3]
+                ).buffer(burst_buffer).envelope
+                bursts_dict[subswath].append((nr, id, burst_bbox))
+    return bursts_dict

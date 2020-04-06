@@ -721,13 +721,6 @@ class Sentinel1Scene:
                          'image_resampling': img_res})
         self.ard_parameters['single_ARD']['dem'] = dem_dict
 
-    def update_ard_parameters(self):
-
-        with open(self.proc_file, 'w') as outfile:
-            json.dump(dict({'processing': self.ard_parameters}),
-                      outfile,
-                      indent=4)
-
     def create_ard(
             self,
             download_dir,
@@ -816,49 +809,31 @@ class Sentinel1Scene:
             if isinstance(master_file, str):
                 master_file = [master_file]
             # get bursts
-            master_bursts = self._zip_annotation_get(download_dir=out_dir)
+            master_bursts = self.zip_annotation_get(download_dir=out_dir)
             bursts_dict = get_bursts_by_polygon(
                 master_annotation=master_bursts,
                 out_poly=processing_poly
             )
             exception_flag = True
             exception_counter = 0
-            with TemporaryDirectory(dir=temp_dir) as temp:
-                while exception_flag is True:
-                    executor_type = 'concurrent_processes'
-                    executor = Executor(executor=executor_type,
-                                        max_workers=max_workers
-                                        )
-                    if exception_counter > 3 or exception_flag is False:
-                        break
-                    for swath, b in bursts_dict.items():
-                        if b != []:
-                            try:
-                                for task in executor.as_completed(
-                                        func=execute_ard,
-                                        iterable=b,
-                                        fargs=(swath,
-                                               master_file,
-                                               out_dir,
-                                               out_prefix,
-                                               temp,
-                                               self.ard_parameters
-                                               )
-
-                                ):
-                                    return_code, out_file = task.result()
-                                    out_paths.append(out_file)
-                            except Exception as e:
-                                logger.debug(e)
-                                max_workers = int(max_workers/2)
-                                exception_flag = True
-                                exception_counter += 1
-                            else:
-                                exception_flag = False
-                        else:
-                            exception_flag = False
-                            continue
-                self.ard_dimap = out_paths
+            while exception_flag is True:
+                if exception_counter > 3 or exception_flag is False:
+                    break
+                try:
+                    bursts_to_ards(
+                        burst_gdf=bursts_dict,
+                        config_file=config_dict,
+                        executor_type=executor_type,
+                        max_workers=1
+                    )
+                except Exception as e:
+                    logger.debug(e)
+                    max_workers = int(max_workers/2)
+                    exception_flag = True
+                    exception_counter += 1
+                else:
+                    exception_flag = False
+            self.ard_dimap = out_paths
         else:
             raise RuntimeError('ERROR: create_ard needs S1 SLC or GRD')
         return out_paths
