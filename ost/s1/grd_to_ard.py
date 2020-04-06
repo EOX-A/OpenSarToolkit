@@ -237,7 +237,7 @@ def grd_to_ard(filelist,
         #         'Something went wrong with ls_mask {}'.format(return_code)
         #     )
         # move to final destination
-        out_ls_mask = opj(output_dir, '{}.LS'.format(file_id))
+        out_ls_mask = opj(output_dir, '{}_LS'.format(file_id))
 
         # delete original file in case they exist
         if os.path.exists(str(out_ls_mask) + '.dim'):
@@ -337,7 +337,7 @@ def grd_to_ard(filelist,
         raise GPTRuntimeError('Something went wrong when geocoding')
 
     # define final destination
-    out_final = opj(output_dir, '{}.bs'.format(file_id))
+    out_final = opj(output_dir, '{}_BS'.format(file_id))
 
     # ---------------------------------------------------------------------
     # 10 Checks and move to output directory

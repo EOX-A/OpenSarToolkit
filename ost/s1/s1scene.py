@@ -757,16 +757,16 @@ class Sentinel1Scene:
 
         if self.product_type == 'GRD':
             if out_prefix is None:
-                out_prefix = self.scene_id
+                out_prefix = '{}_{}'.format(
+                        self.scene_id, self.ard_parameters['single_ARD']['product_type']
+                )
             out_prefix = out_prefix.replace(' ', '_')
             with TemporaryDirectory(dir=temp_dir) as temp:
                 if isinstance(filelist, str):
                     filelist = [filelist]
                 # write to class attribute
                 self.ard_dimap = glob.glob(
-                    opj(out_dir, '{}*{}*bs.dim'.format(
-                        out_prefix, self.ard_parameters['single_ARD']['product_type'])
-                        )
+                    opj(out_dir, '{}*BS.dim'.format(out_prefix))
                 )
                 if overwrite or len(self.ard_dimap) == 0:
                     # run the processing
@@ -781,9 +781,7 @@ class Sentinel1Scene:
                         )
                 # write to class attribute
                 self.ard_dimap = glob.glob(
-                    opj(out_dir, '{}*{}*bs.dim'.format(
-                        out_prefix, self.ard_parameters['single_ARD']['product_type'])
-                        )
+                    opj(out_dir, '{}*BS.dim'.format(out_prefix))
                 )[0]
                 if not os.path.isfile(self.ard_dimap):
                     raise RuntimeError
