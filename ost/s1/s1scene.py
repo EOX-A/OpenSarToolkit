@@ -731,7 +731,7 @@ class Sentinel1Scene:
     def update_ard_parameters(self):
 
         with open(self.proc_file, 'w') as outfile:
-            json.dump(dict({'processing_parameters': self.ard_parameters}),
+            json.dump(dict({'processing': self.ard_parameters}),
                       outfile,
                       indent=4)
 

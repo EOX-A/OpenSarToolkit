@@ -92,7 +92,7 @@ def _create_mt_ls_mask(burst_gdf, project_file):
         project_params = json.load(file)
         processing_dir = project_params['project']['processing_dir']
         temp_dir = project_params['project']['temp_dir']
-        ard = project_params['processing_parameters']['time-series_ARD']
+        ard = project_params['processing']['time-series_ARD']
 
     # create layover
     iter_list = []
@@ -190,7 +190,7 @@ def ards_to_timeseries(burst_gdf, project_file):
 
     # load ard parameters
     with open(project_file, 'r') as ard_file:
-        ard_params = json.load(ard_file)['processing_parameters']
+        ard_params = json.load(ard_file)['processing']
         ard = ard_params['single_ARD']
         ard_mt = ard_params['time-series_ARD']
 
@@ -223,9 +223,9 @@ def timeseries_to_timescan(burst_gdf, project_file):
     with open(project_file, 'r') as ard_file:
         project_params = json.load(ard_file)
         processing_dir = project_params['project']['processing_dir']
-        ard = project_params['processing_parameters']['single_ARD']
-        ard_mt = project_params['processing_parameters']['time-series_ARD']
-        ard_tscan = project_params['processing_parameters']['time-scan_ARD']
+        ard = project_params['processing']['single_ARD']
+        ard_mt = project_params['processing']['time-series_ARD']
+        ard_tscan = project_params['processing']['time-scan_ARD']
 
     # get the db scaling right
     if ard['to_db'] or ard_mt['to_db']:

@@ -19,7 +19,7 @@ def test_burst_import(s1_slc_master,
         return_code = burst_import(
             infile=s1_slc_master,
             outfile=os.path.join(
-                slc_project_class.processing_dir,
+                slc_project_class.temp_dir,
                 scene_id+'_'+burst.bid+'_import'
             ),
             logfile=logger,
@@ -52,11 +52,11 @@ def test_burst_calibration(s1_slc_ost_master,
             continue
         return_code = calibration(
             infile=os.path.join(
-                slc_project_class.processing_dir,
+                slc_project_class.temp_dir,
                 scene_id+'_'+burst.bid+'_import.dim'
             ),
             outfile=os.path.join(
-                slc_project_class.processing_dir, scene_id+'_BS'
+                slc_project_class.temp_dir, scene_id+'_BS'
             ),
             logfile=logger,
             ard=ard_params,

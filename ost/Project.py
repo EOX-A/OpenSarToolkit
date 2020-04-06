@@ -1,6 +1,7 @@
 import os
 import json
 import glob
+import importlib
 
 import logging
 import rasterio
@@ -17,11 +18,12 @@ from ost.helpers.settings import set_log_level, setup_logfile, OST_ROOT
 from ost.helpers.settings import check_ard_parameters
 
 from ost.s1 import burst_inventory, burst_batch
-from ost.s1 import search, refine, download, burst, grd_batch
+from ost.s1 import search, refine, download, grd_batch
 
 
 # get the logger
 logger = logging.getLogger(__name__)
+
 
 class Generic:
 
@@ -407,7 +409,7 @@ class Sentinel1(Generic):
             outfile = self.inventory_dir.joinpath('burst_inventory.gpkg')
 
         # run the burst inventory
-        self.burst_inventory = burst.burst_inventory(
+        self.burst_inventory = burst_inventory.burst_inventory(
             inventory_df,
             outfile,
             download_dir=self.download_dir,
@@ -417,7 +419,7 @@ class Sentinel1(Generic):
 
         # refine the burst inventory
         if refine:
-            self.burst_inventory = burst.refine_burst_inventory(
+            self.burst_inventory = burst_inventory.refine_burst_inventory(
                 self.aoi, self.burst_inventory,
                 f'{str(outfile)[:-5]}.refined.gpkg'
             )
@@ -540,17 +542,32 @@ class Sentinel1Batch(Sentinel1):
 
     # ---------------------------------------
     # methods
-    def update_ard_parameters(self):
+    # processing related functions
+    def get_ard_parameters(self):
+        # get path to graph
+        # get path to ost package
+        rootpath = importlib.util.find_spec('ost').submodule_search_locations[0]
+        rootpath = opj(rootpath, 'graphs', 'ard_json')
 
+        template_file = opj(rootpath, '{}.{}.json'.format(
+            self.product_type.lower(),
+            self.ard_type.replace('-', '_').lower()))
+
+        with open(template_file, 'r') as ard_file:
+            self.ard_parameters = json.load(ard_file)['processing']
+
+    def update_ard_parameters(self):
         # check for correctness of ard parameters
         check_ard_parameters(self.ard_parameters)
+        if self.ard_type != self.ard_parameters['single_ARD']['type']:
+            self.ard_type = self.ard_parameters['single_ARD']['type']
+            self.get_ard_parameters()
 
         # re-create project dict with update ard parameters
         self.config_dict.update(
             inventory=self.inventory_dict,
             processing=self.ard_parameters
         )
-
         # dump to json file
         with open(self.config_file, 'w') as outfile:
             json.dump(self.config_dict, outfile, indent=4)
@@ -697,7 +714,7 @@ class Sentinel1Batch(Sentinel1):
             download_dir=self.download_dir,
             processing_dir=self.processing_dir,
             temp_dir=self.temp_dir,
-            config_file=self.config_file,
+            project_dict=self.config_dict,
             subset=self.aoi,
             )
 
@@ -716,7 +733,6 @@ class Sentinel1Batch(Sentinel1):
             # check and retry function
             i = 0
             while nr_of_ts > nr_of_processed:
-
                 grd_batch.ards_to_timeseries(self.inventory,
                                              self.processing_dir,
                                              self.temp_dir,
