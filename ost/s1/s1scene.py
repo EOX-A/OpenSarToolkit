@@ -782,7 +782,7 @@ class Sentinel1Scene:
                 # write to class attribute
                 self.ard_dimap = glob.glob(
                     opj(out_dir, '{}*{}*bs.dim'.format(
-                        out_prefix, self.ard_parameters['product_type'])
+                        out_prefix, self.ard_parameters['single_ARD']['product_type'])
                         )
                 )[0]
                 if not os.path.isfile(self.ard_dimap):

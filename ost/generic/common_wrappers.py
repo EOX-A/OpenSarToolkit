@@ -172,6 +172,7 @@ def linear_to_db(infile, outfile, logfile, ncores=os.cpu_count()):
     # handle errors and logs
     if return_code == 0:
         logger.info('Succesfully converted product to dB-scale.')
+        return return_code
     else:
         raise GPTRuntimeError(
             'ERROR: dB Scaling exited with an error {}. See {} for '

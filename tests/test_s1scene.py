@@ -1,3 +1,4 @@
+from shapely.geometry import box
 from ost import Sentinel1Scene
 
 
@@ -20,10 +21,17 @@ def test_s1scene_metadata(s1_id):
     assert s1.scene_id == control_id
 
 
-def test_s1scene_grd_processing(s1_grd_notnr_ost_product, grd_project_class):
+def test_s1scene_grd_processing(s1_grd_notnr_ost_product,
+                                grd_project_class,
+                                some_bounds_grd
+                                ):
     s1scene = s1_grd_notnr_ost_product[1]
+    aoi = box(some_bounds_grd[0], some_bounds_grd[1],
+              some_bounds_grd[2], some_bounds_grd[3]
+              ).wkt
     s1scene.create_ard(download_dir=grd_project_class.download_dir,
                        out_dir=grd_project_class.project_dir,
                        overwrite=True,
+                       subset=aoi
                        )
     s1scene.create_rgb(outfile=s1scene.ard_dimap.replace('.dim', '.tif'))

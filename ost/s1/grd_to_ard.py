@@ -346,10 +346,10 @@ def grd_to_ard(filelist,
         h.delete_dimap(out_final)   
     
     # check final output
-    return_code = h.check_out_dimap(geocoded)
-    if return_code != 0:
-        h.delete_dimap(geocoded)
-        raise GPTRuntimeError('Something wrong with the GPT output')
+    # return_code = h.check_out_dimap(geocoded)
+    # if return_code != 0:
+    #     h.delete_dimap(geocoded)
+    #     raise GPTRuntimeError('Something wrong with the GPT output')
     
     # move to final destination
     shutil.move('{}.dim'.format(geocoded), '{}.dim'.format(out_final))
