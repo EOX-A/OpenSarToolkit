@@ -525,15 +525,8 @@ class Sentinel1Batch(Sentinel1):
 
         # ---------------------------------------
         # 4 Set up project JSON
-
-        # find respective template for selected ARD type
-        template_file = OST_ROOT.joinpath(
-            f"graphs/ard_json/{self.product_type.lower()}"
-            f".{ard_type.replace('-', '_').lower()}.json"
-        )
-        # open and load parameters
-        with open(template_file, 'r') as ard_file:
-            self.ard_parameters = json.load(ard_file)['processing']
+        # load parameters
+        self.ard_parameters = self.get_ard_parameters()
 
         # define project file
         self.config_file = self.project_dir.joinpath('project.json')
@@ -542,7 +535,6 @@ class Sentinel1Batch(Sentinel1):
 
     # ---------------------------------------
     # methods
-    # processing related functions
     def get_ard_parameters(self):
         # get path to graph
         # get path to ost package

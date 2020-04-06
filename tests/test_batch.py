@@ -12,6 +12,8 @@ def test_grds_to_ard(grd_project_class):
     for ard_type in config_check['type']['choices']:
         grd_project_class.ard_parameters["single_ARD"]["type"] = ard_type
         grd_project_class.update_ard_parameters()
+        grd_project_class.ard_parameters['single_ARD']['resolution'] = 20
+        grd_project_class.update_ard_parameters()
         grd_project_class.grds_to_ard(
             timeseries=False,
             timescan=False,

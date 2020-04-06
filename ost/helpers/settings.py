@@ -177,7 +177,7 @@ HERBERT_USER = {'uname': 'herbert_thethird',
                 }
 
 config_check = dict({
-    'type': {'type': str, 'choices': ['OST-GTC', 'OST-RTC']},
+    'type': {'type': str, 'choices': ['OST-GTC', 'OST-RTC', 'Earth-Engine', 'CEOS']},
     'resolution': {'type': int, 'choices': range(10, 5000)},
     'backscatter': {'type': bool},
     'remove_border_noise':  {'type': bool},

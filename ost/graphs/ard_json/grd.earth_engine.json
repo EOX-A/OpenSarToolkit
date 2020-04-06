@@ -1,7 +1,7 @@
 {
     "processing": {
         "single_ARD": {
-            "type": "Earth Engine",
+            "type": "Earth-Engine",
             "resolution": 10,
             "remove_border_noise": true,
             "product_type": "GTC-sigma0",
