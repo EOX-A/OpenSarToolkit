@@ -498,7 +498,6 @@ class Sentinel1Batch(Sentinel1):
 
         # possible ard types to select from for GRD
         elif product_type == 'SLC':
-
             ard_types_slc = ['OST-GTC', 'OST-RTC', 'OST-COH', 'OST-RTCCOH',
                              'OST-POL', 'OST-ALL']
 
@@ -526,7 +525,13 @@ class Sentinel1Batch(Sentinel1):
         # ---------------------------------------
         # 4 Set up project JSON
         # load parameters
-        self.ard_parameters = self.get_ard_parameters()
+        template_file = OST_ROOT.joinpath(
+            f"graphs/ard_json/{self.product_type.lower()}"
+            f".{self.ard_type.replace('-', '_').lower()}.json"
+        )
+        # open and load parameters
+        with open(template_file, 'r') as ard_file:
+            self.ard_parameters = json.load(ard_file)['processing']
 
         # define project file
         self.config_file = self.project_dir.joinpath('project.json')
@@ -536,15 +541,11 @@ class Sentinel1Batch(Sentinel1):
     # ---------------------------------------
     # methods
     def get_ard_parameters(self):
-        # get path to graph
-        # get path to ost package
-        rootpath = importlib.util.find_spec('ost').submodule_search_locations[0]
-        rootpath = opj(rootpath, 'graphs', 'ard_json')
-
-        template_file = opj(rootpath, '{}.{}.json'.format(
-            self.product_type.lower(),
-            self.ard_type.replace('-', '_').lower()))
-
+        template_file = OST_ROOT.joinpath(
+            f"graphs/ard_json/{self.product_type.lower()}"
+            f".{self.ard_type.replace('-', '_').lower()}.json"
+        )
+        # open and load parameters
         with open(template_file, 'r') as ard_file:
             self.ard_parameters = json.load(ard_file)['processing']
 
@@ -712,7 +713,6 @@ class Sentinel1Batch(Sentinel1):
 
         # time-series part
         if timeseries or timescan:
-
             nr_of_processed = len(
                 glob.glob(opj(self.processing_dir, '*',
                               'Timeseries', '.*processed')))
@@ -741,7 +741,6 @@ class Sentinel1Batch(Sentinel1):
                     break
 
         if timescan:
-
             # number of already processed timescans
             nr_of_processed = len(glob.glob(opj(
                 self.processing_dir, '*', 'Timescan', '.*processed')))

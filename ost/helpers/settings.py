@@ -177,7 +177,18 @@ HERBERT_USER = {'uname': 'herbert_thethird',
                 }
 
 config_check = dict({
-    'type': {'type': str, 'choices': ['OST-GTC', 'OST-RTC', 'Earth-Engine', 'CEOS']},
+    'type': {'type': str, 'choices': ['OST-GTC', 'OST-RTC', 'Earth-Engine', 'CEOS',
+                                      'OST-COH', 'OST-RTCCOH', 'OST-POL', 'OST-ALL'
+                                      ]
+             },
+    'ard_types_grd': {'type': str,
+                      'choices':
+                          ['CEOS', 'Earth-Engine', 'OST-GTC', 'OST-RTC']
+                      },
+    'ard_types_slc': {'type': str,
+                      'choices':
+                          ['CEOS', 'Earth-Engine', 'OST-GTC', 'OST-RTC']
+                      },
     'resolution': {'type': int, 'choices': range(10, 5000)},
     'backscatter': {'type': bool},
     'remove_border_noise':  {'type': bool},

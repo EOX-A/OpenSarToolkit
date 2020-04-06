@@ -737,7 +737,6 @@ class Sentinel1Scene:
 
     def create_ard(self, infile, out_dir, out_prefix, temp_dir,
                    subset=None, polar='VV,VH,HH,HV'):
-
         self.proc_file = opj(out_dir, 'processing.json')
         self.update_ard_parameters()
         # check for correctness of ARD paramters
@@ -752,7 +751,6 @@ class Sentinel1Scene:
         #    self.center_lat, self.ard_parameters['resolution'])
 
         if self.product_type == 'GRD':
-
             # run the processing
             grd_to_ard([infile],
                        out_dir,

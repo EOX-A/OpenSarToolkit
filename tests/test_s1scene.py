@@ -18,3 +18,7 @@ def test_s1scene_metadata(s1_id):
                     }
     assert control_dict == s1.info()
     assert s1.scene_id == control_id
+
+
+def test_s1scene_processing(s1_grd_notnr_ost_product):
+    s1_grd_notnr_ost_product.to_ard()
