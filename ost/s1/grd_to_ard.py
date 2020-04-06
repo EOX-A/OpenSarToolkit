@@ -27,7 +27,7 @@ def grd_to_ard(filelist,
                temp_dir, 
                ard_params,
                subset=None,
-               ncores=os.cpu_count()*2
+               ncores=os.cpu_count()
                ):
     '''The main function for the grd to ard generation
 
@@ -74,7 +74,9 @@ def grd_to_ard(filelist,
             return_code = _grd_frame_import(file, grd_import, logfile, polars)
             if return_code != 0:
                 h.delete_dimap(grd_import)
-                return return_code
+                raise GPTRuntimeError(
+                    'Something went wrong with slcie assembly/importing'
+                )
 
         # create list of scenes for full acquisition in
         # preparation of slice assembly
@@ -93,7 +95,9 @@ def grd_to_ard(filelist,
         # delete output if command failed for some reason and return
         if return_code != 0:
             h.delete_dimap(grd_import)
-            return return_code
+            raise GPTRuntimeError(
+                'Something went wrong with slcie assembly/importing'
+            )
 
         # subset mode after slice assembly
         if subset:
@@ -107,7 +111,7 @@ def grd_to_ard(filelist,
             # delete output if command failed for some reason and return
             if return_code != 0:
                 h.delete_dimap(grd_subset)
-                return return_code
+                raise GPTRuntimeError('Something went wrong when subsetting')
             
     # single scene case
     else:
@@ -125,7 +129,7 @@ def grd_to_ard(filelist,
         # delete output if command failed for some reason and return
         if return_code != 0:
             h.delete_dimap(grd_import)
-            return return_code
+            raise GPTRuntimeError('Something went wrong when importing')
     
     # ---------------------------------------------------------------------
     # 2 GRD Border Noise
@@ -171,7 +175,7 @@ def grd_to_ard(filelist,
     # delete output if command failed for some reason and return
     if return_code != 0:
         h.delete_dimap(calibrated)
-        return return_code
+        raise GPTRuntimeError('Something went wrong when calibrating')
     
     # input for next step
     infile = '{}.dim'.format(calibrated)
@@ -264,7 +268,7 @@ def grd_to_ard(filelist,
         # delete output if command failed for some reason and return
         if return_code != 0:
             h.delete_dimap(filtered)
-            return return_code
+            raise GPTRuntimeError('Something went wrong when applying single scene speckle filter')
        
         # define input for next step
         infile = '{}.dim'.format(filtered)
@@ -288,7 +292,7 @@ def grd_to_ard(filelist,
         # delete output if command failed for some reason and return
         if return_code != 0:
             h.delete_dimap(flattened)
-            return return_code
+            raise GPTRuntimeError('Something went wrong with TF')
         
         # define input for next step
         infile = '{}.dim'.format(flattened)
@@ -306,7 +310,7 @@ def grd_to_ard(filelist,
         # delete output if command failed for some reason and return
         if return_code != 0:
             h.delete_dimap(db_scaled)
-            return return_code
+            raise GPTRuntimeError('Something went wrong when converting to DB')
         
         # set input for next step
         infile = '{}.dim'.format(db_scaled)
@@ -330,7 +334,7 @@ def grd_to_ard(filelist,
     # delete output if command failed for some reason and return
     if return_code != 0:
         h.delete_dimap(geocoded)
-        return return_code
+        raise GPTRuntimeError('Something went wrong when geocoding')
 
     # define final destination
     out_final = opj(output_dir, '{}.bs'.format(file_id))
@@ -345,7 +349,7 @@ def grd_to_ard(filelist,
     return_code = h.check_out_dimap(geocoded)
     if return_code != 0:
         h.delete_dimap(geocoded)
-        return return_code
+        raise GPTRuntimeError('Something wrong with the GPT output')
     
     # move to final destination
     shutil.move('{}.dim'.format(geocoded), '{}.dim'.format(out_final))
@@ -692,7 +696,7 @@ def _grd_subset_georegion(infile, outfile, logfile, georegion):
         )
 
 
-@retry(tries=3, delay=1, logger=logger)
+@retry(stop_max_attempt_number=3, wait_fixed=1)
 def _grd_remove_border(infile):
     '''An OST function to remove GRD border noise from Sentinel-1 data
 

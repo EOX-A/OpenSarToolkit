@@ -1,4 +1,4 @@
-from ost.helpers.settings import config_check
+from ost.helpers.settings import CONFIG_CHECK
 
 
 def test_update_ard_param(grd_project_class):
@@ -9,8 +9,8 @@ def test_update_ard_param(grd_project_class):
 
 # Test GRDs to ARD kind of batch
 def test_grds_to_ard(grd_project_class):
-    for ard_type in config_check['type']['choices']:
-        if ard_type in config_check['ard_types_grd']['choices']:
+    for ard_type in CONFIG_CHECK['type']['choices']:
+        if ard_type in CONFIG_CHECK['ard_types_grd']['choices']:
             grd_project_class.ard_parameters["single_ARD"]["type"] = ard_type
             grd_project_class.update_ard_parameters()
             grd_project_class.ard_parameters['single_ARD']['resolution'] = 20

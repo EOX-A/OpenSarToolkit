@@ -85,17 +85,17 @@ def check_ard_parameters(ard_parameters):
         else:
             if key == 'dem_file':
                 if value != " ":
-                    check_value(key, value, config_check[key]['type'])
+                    check_value(key, value, CONFIG_CHECK[key]['type'])
                     if not Path(value).exists():
                         raise FileNotFoundError('External DEM File not found.')
             # otherwise we do the check routine
             else:
-                if config_check[key]['type'] is bool:
-                    check_value(key, value, config_check[key]['type'])
+                if CONFIG_CHECK[key]['type'] is bool:
+                    check_value(key, value, CONFIG_CHECK[key]['type'])
                 else:
                     check_value(
-                        key, value, config_check[key]['type'],
-                        config_check[key]['choices']
+                        key, value, CONFIG_CHECK[key]['type'],
+                        CONFIG_CHECK[key]['choices']
                     )
 
 
@@ -176,7 +176,7 @@ HERBERT_USER = {'uname': 'herbert_thethird',
                 'asf_pword': 'q12w34er56ty7WER32P'
                 }
 
-config_check = dict({
+CONFIG_CHECK = dict({
     'type': {'type': str, 'choices': ['OST-GTC', 'OST-RTC', 'Earth-Engine', 'CEOS',
                                       'OST-COH', 'OST-RTCCOH', 'OST-POL', 'OST-ALL'
                                       ]
@@ -187,7 +187,7 @@ config_check = dict({
                       },
     'ard_types_slc': {'type': str,
                       'choices':
-                          ['CEOS', 'Earth-Engine', 'OST-GTC', 'OST-RTC']
+                          ['OST-COH', 'OST-RTCCOH', 'OST-POL', 'OST-ALL']
                       },
     'resolution': {'type': int, 'choices': range(10, 5000)},
     'backscatter': {'type': bool},

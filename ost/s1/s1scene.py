@@ -1,6 +1,3 @@
-"""This module contains the S1Scene class for handling of a Sentinel-1 product
-
-"""
 import os
 from os.path import join as opj
 import sys
@@ -12,9 +9,11 @@ import urllib
 from urllib.error import URLError
 import zipfile
 import fnmatch
+import rasterio
 import xml.dom.minidom
 import xml.etree.ElementTree as eTree
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import pandas as pd
@@ -24,18 +23,14 @@ from shapely.wkt import loads
 
 from ost.helpers import scihub, peps, onda, raster as ras
 from ost.s1.grd_to_ard import grd_to_ard, ard_to_rgb, ard_to_thumbnail
-from ost.helpers.settings import APIHUB_BASEURL
-
-__author__ = "Andreas Vollrath"
-__version__ = 1.0
-__license__ = 'MIT'
+from ost.helpers.settings import APIHUB_BASEURL, check_ard_parameters
 
 logger = logging.getLogger(__name__)
 
 
 class Sentinel1Scene:
 
-    def __init__(self, scene_id, ard_type='OST_GTC'):
+    def __init__(self, scene_id, ard_type='OST-GTC'):
         self.scene_id = scene_id
         self.mission_id = scene_id[0:3]
         self.mode_beam = scene_id[4:6]
@@ -96,6 +91,7 @@ class Sentinel1Scene:
         # set initial ARD parameters to ard_type
         self.ard_parameters = {}
         self.get_ard_parameters(ard_type)
+        check_ard_parameters(self.ard_parameters)
 
     def info(self):
 
@@ -704,9 +700,6 @@ class Sentinel1Scene:
             self.ard_parameters = json.load(ard_file)['processing']
 
     def set_external_dem(self, dem_file):
-
-        import rasterio
-
         # check if file exists
         if not os.path.isfile(dem_file):
             print(' ERROR: No dem file found at location {}.'.format(dem_file))
@@ -735,38 +728,140 @@ class Sentinel1Scene:
                       outfile,
                       indent=4)
 
-    def create_ard(self, infile, out_dir, out_prefix, temp_dir,
-                   subset=None, polar='VV,VH,HH,HV'):
-        self.proc_file = opj(out_dir, 'processing.json')
-        self.update_ard_parameters()
-        # check for correctness of ARD paramters
-
-        #        self.center_lat = self._get_center_lat(infile)
-        #        if float(self.center_lat) > 59 or float(self.center_lat) < -59:
-        #            logger.info('Scene is outside SRTM coverage. Will use 30m ASTER'
-        #                  ' DEM instead.')
-        #            self.ard_parameters['dem'] = 'ASTER 1sec GDEM'
-
-        # self.ard_parameters['resolution'] = h.resolution_in_degree(
-        #    self.center_lat, self.ard_parameters['resolution'])
+    def create_ard(
+            self,
+            download_dir,
+            out_dir,
+            filelist=None,
+            out_prefix=None,
+            temp_dir=None,
+            subset=None,
+            max_workers=int(os.cpu_count()/2),
+            overwrite=False
+    ):
+        if filelist is None:
+            filelist = [self.get_path(download_dir=download_dir)]
+        out_paths = []
+        if subset is not None:
+            p_poly = loads(subset)
+            self.processing_poly = p_poly
+            self.center_lat = p_poly.bounds[3]-p_poly.bounds[1]
+        else:
+            self.processing_poly = None
+            try:
+                if self.product_type == 'GRD':
+                    self.center_lat = self._get_center_lat(filelist[0])
+                else:
+                    self.center_lat = self._get_center_lat(filelist)
+            except Exception as e:
+                raise
+        if float(self.center_lat) > 59 or float(self.center_lat) < -59:
+            logger.debug(
+                'INFO: Scene is outside SRTM coverage. Will use 30m ASTER'
+                ' DEM instead.'
+            )
+            self.ard_parameters['dem'] = 'ASTER 1sec GDEM'
 
         if self.product_type == 'GRD':
-            # run the processing
-            grd_to_ard([infile],
-                       out_dir,
-                       out_prefix,
-                       temp_dir,
-                       self.proc_file,
-                       subset=subset)
+            if out_prefix is None:
+                out_prefix = self.scene_id
+            out_prefix = out_prefix.replace(' ', '_')
+            with TemporaryDirectory(dir=temp_dir) as temp:
+                if isinstance(filelist, str):
+                    filelist = [filelist]
+                # write to class attribute
+                self.ard_dimap = glob.glob(
+                    opj(out_dir, '{}*{}*bs.dim'.format(
+                        out_prefix, self.ard_parameters['single_ARD']['product_type'])
+                        )
+                )
+                if overwrite or len(self.ard_dimap) == 0:
+                    # run the processing
+                    grd_to_ard(
+                        filelist=filelist,
+                        output_dir=out_dir,
+                        file_id=out_prefix,
+                        temp_dir=temp,
+                        ard_params=self.ard_parameters,
+                        subset=subset,
+                        ncores=os.cpu_count()
+                        )
+                # write to class attribute
+                self.ard_dimap = glob.glob(
+                    opj(out_dir, '{}*{}*bs.dim'.format(
+                        out_prefix, self.ard_parameters['product_type'])
+                        )
+                )[0]
+                if not os.path.isfile(self.ard_dimap):
+                    raise RuntimeError
+                out_paths.append(self.ard_dimap)
 
-            # write to class attribute
-            self.ard_dimap = glob.glob(opj(out_dir, '{}*bs.dim'
-                                           .format(out_prefix)))[0]
+        elif self.product_type == 'SLC':
+            """
+            Works for only one product at a time, all products are handled as 
+            master products in this condition, returning an ARD with 
+            the provided ARD parameters!
+            """
+            # we need to convert the infile t a list for the grd_to_ard routine
+            if subset is not None:
+                try:
+                    processing_poly = loads(subset)
+                    self.processing_poly = processing_poly
+                except Exception as e:
+                    raise e
+            else:
+                processing_poly = None
+            # get file paths
+            master_file = self.get_path(out_dir)
+            if isinstance(master_file, str):
+                master_file = [master_file]
+            # get bursts
+            master_bursts = self._zip_annotation_get(download_dir=out_dir)
+            bursts_dict = get_bursts_by_polygon(
+                master_annotation=master_bursts,
+                out_poly=processing_poly
+            )
+            exception_flag = True
+            exception_counter = 0
+            with TemporaryDirectory(dir=temp_dir) as temp:
+                while exception_flag is True:
+                    executor_type = 'concurrent_processes'
+                    executor = Executor(executor=executor_type,
+                                        max_workers=max_workers
+                                        )
+                    if exception_counter > 3 or exception_flag is False:
+                        break
+                    for swath, b in bursts_dict.items():
+                        if b != []:
+                            try:
+                                for task in executor.as_completed(
+                                        func=execute_ard,
+                                        iterable=b,
+                                        fargs=(swath,
+                                               master_file,
+                                               out_dir,
+                                               out_prefix,
+                                               temp,
+                                               self.ard_parameters
+                                               )
 
-        elif self.product_type != 'GRD':
-
-            print(' ERROR: create_ard method for single products is currently'
-                  ' only available for GRD products')
+                                ):
+                                    return_code, out_file = task.result()
+                                    out_paths.append(out_file)
+                            except Exception as e:
+                                logger.debug(e)
+                                max_workers = int(max_workers/2)
+                                exception_flag = True
+                                exception_counter += 1
+                            else:
+                                exception_flag = False
+                        else:
+                            exception_flag = False
+                            continue
+                self.ard_dimap = out_paths
+        else:
+            raise RuntimeError('ERROR: create_ard needs S1 SLC or GRD')
+        return out_paths
 
     def create_rgb(self, outfile, driver='GTiff'):
 
@@ -799,7 +894,7 @@ class Sentinel1Scene:
 
     # other functions
     def _get_center_lat(self, scene_path=None):
-
+        scene_path = str(scene_path)
         if scene_path[-4:] == '.zip':
             zip_archive = zipfile.ZipFile(scene_path)
             manifest = zip_archive.read('{}.SAFE/manifest.safe'

@@ -20,5 +20,10 @@ def test_s1scene_metadata(s1_id):
     assert s1.scene_id == control_id
 
 
-def test_s1scene_processing(s1_grd_notnr_ost_product):
-    s1_grd_notnr_ost_product.to_ard()
+def test_s1scene_grd_processing(s1_grd_notnr_ost_product, grd_project_class):
+    s1scene = s1_grd_notnr_ost_product[1]
+    s1scene.create_ard(download_dir=grd_project_class.download_dir,
+                       out_dir=grd_project_class.project_dir,
+                       overwrite=True,
+                       )
+    s1scene.create_rgb(outfile=s1scene.ard_dimap.replace('.dim', '.tif'))
