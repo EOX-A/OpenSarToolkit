@@ -703,7 +703,7 @@ class Sentinel1Batch(Sentinel1):
         #            self.ard_parameters['dem'] = 'ASTER 1sec GDEM'
 
         # the grd to ard batch routine
-        grd_batch.grd_to_ard_batch(
+        self.inventory = grd_batch.grd_to_ard_batch(
             inventory_df=self.inventory,
             download_dir=self.download_dir,
             processing_dir=self.processing_dir,

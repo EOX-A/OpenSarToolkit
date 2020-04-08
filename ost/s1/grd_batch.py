@@ -93,7 +93,7 @@ def grd_to_ard_batch(
                 file_id = '{}_{}'.format(acquisition_date, track)
 
                 # apply the grd_to_ard function
-                return_code, out_file = grd_to_ard(
+                return_code, out_file, out_ls_mask = grd_to_ard(
                     scene_paths,
                     out_dir,
                     file_id,
@@ -103,11 +103,27 @@ def grd_to_ard_batch(
                     ncores=project_dict['cpus_per_process']
                     )
                 if to_tif:
-                    ard_to_rgb(infile=out_file,
-                               outfile=out_file.replace('.dim', '.tif'),
-                               driver='GTiff',
-                               to_db=True
-                               )
+                    tif_file = ard_to_rgb(infile=out_file,
+                                          outfile=out_file.replace('.dim', '.tif'),
+                                          driver='GTiff',
+                                          to_db=True
+                                          )
+
+                for i, row in inventory_df.iterrows():
+                    for s in list_of_scenes:
+                        if row.identifier == Sentinel1Scene(s).scene_id:
+                            try:
+                                inventory_df.at[i, 'out_dimap'] = out_file
+                                inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
+                                if to_tif:
+                                    inventory_df.at[i, 'out_tif'] = tif_file
+                                else:
+                                    inventory_df.at[i, 'out_tif'] = None
+                            except:
+                                inventory_df.at[i, 'out_dimap'] = None
+                                inventory_df.at[i, 'out_tif'] = None
+                                inventory_df.at[i, 'out_ls_mask'] = None
+    return inventory_df
 
 
 def ards_to_timeseries(inventory_df, processing_dir, temp_dir,

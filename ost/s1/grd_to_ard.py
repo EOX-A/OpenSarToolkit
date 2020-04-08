@@ -359,7 +359,13 @@ def grd_to_ard(filelist,
     with open(opj(output_dir, '.processed'), 'w') as file:
         file.write('passed all tests \n')
 
-    return return_code, out_final + '.dim'
+    # Return colected files that have been processed
+    if ard['create_ls_mask'] is True:
+        out_ls_mask = out_ls_mask + '.dim'
+    else:
+        out_ls_mask = None
+
+    return return_code, out_final + '.dim', out_ls_mask
             
 
 def ard_to_rgb(infile, outfile, driver='GTiff', to_db=True):
@@ -419,6 +425,7 @@ def ard_to_rgb(infile, outfile, driver='GTiff', to_db=True):
                     for k, arr in [(1, co_array), (2, cr_array),
                                    (3, ratio_array)]:
                         dst.write(arr[0, ], indexes=k, window=window)
+    return outfile
 
 
 def ard_to_thumbnail(infile, outfile, driver='JPEG', shrink_factor=25,
