@@ -97,7 +97,7 @@ def slc_project_class(some_bounds_slc, s1_slc_master, s1_slc_ost_master):
                                      product.month,
                                      product.day
                                      )
-        product.download_path(download_dir=Path(download_path))
+        product._download_path(download_dir=Path(download_path))
         os.makedirs(download_path, exist_ok=True)
         shutil.copy(s1_slc_master, download_path)
         shutil.move(
