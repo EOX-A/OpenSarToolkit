@@ -7,13 +7,13 @@ import logging
 import gdal
 
 from ost import Sentinel1Scene
-from ost.s1 import grd_to_ard
 from ost.helpers import raster as ras
 from ost.generic import ts_extent
 from ost.generic import ts_ls_mask
 from ost.generic import ard_to_ts
 from ost.generic import timescan
 from ost.generic import mosaic
+from ost.s1.grd_to_ard import ard_to_rgb, grd_to_ard
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,7 @@ def grd_to_ard_batch(
         temp_dir,
         project_dict,
         subset=None,
+        to_tif=False,
 ):
     # where all frames are grouped into acquisitions
     processing_dict = _create_processing_dict(inventory_df)
@@ -84,20 +85,29 @@ def grd_to_ard_batch(
                 )
             else:
                 # get the paths to the file
-                scene_paths = ([Sentinel1Scene(i).get_path(download_dir)
-                               for i in list_of_scenes])
+                scene_paths = ([
+                    Sentinel1Scene(i).get_path(download_dir=download_dir)
+                    for i in list_of_scenes
+                ])
 
                 file_id = '{}_{}'.format(acquisition_date, track)
 
                 # apply the grd_to_ard function
-                grd_to_ard.grd_to_ard(scene_paths,
-                                      out_dir,
-                                      file_id,
-                                      temp_dir,
-                                      project_dict['processing'],
-                                      subset=subset,
-                                      ncores=project_dict['cpus_per_process']
-                                      )
+                return_code, out_file = grd_to_ard(
+                    scene_paths,
+                    out_dir,
+                    file_id,
+                    temp_dir,
+                    project_dict['processing'],
+                    subset=subset,
+                    ncores=project_dict['cpus_per_process']
+                    )
+                if to_tif:
+                    ard_to_rgb(infile=out_file,
+                               outfile=out_file.replace('.dim', '.tif'),
+                               driver='GTiff',
+                               to_db=True
+                               )
 
 
 def ards_to_timeseries(inventory_df, processing_dir, temp_dir,

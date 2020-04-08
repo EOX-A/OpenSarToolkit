@@ -113,60 +113,46 @@ def s1_download(argument_list):
     else:
         first_byte = 0
 
-    tries = 1
-    while zip_test is not None and tries <= 10:
+    # get byte offset for already downloaded file
+    header = {"Range": f"bytes={first_byte}-{total_length}"}
+    response = session.get(url, headers=header, stream=True)
 
-        while first_byte < total_length:
-
-            # get byte offset for already downloaded file
-            header = {"Range": f"bytes={first_byte}-{total_length}"}
-            response = session.get(url, headers=header, stream=True)
-
-            # actual download
-            with open(filename, "ab") as file:
-
-                if total_length is None:
-                    file.write(response.content)
-                else:
-                    pbar = tqdm.tqdm(total=total_length, initial=first_byte,
-                                     unit='B', unit_scale=True,
-                                     desc=' INFO: Downloading ')
-
-                    for chunk in response.iter_content(chunk_size):
-                        if chunk:
-                            file.write(chunk)
-                            pbar.update(chunk_size)
-
-            pbar.close()
-
-            # updated fileSize
-            first_byte = os.path.getsize(filename)
-
-        logger.info(
-            f'Checking the zip archive of {filename.name} for inconsistency'
-        )
-
-        zip_test = h.check_zipfile(filename)
-
-        # if it did not pass the test, remove the file
-        # in the while loop it will be downloaded again
-        if zip_test is not None:
-            logger.info(f'{filename.name} did not pass the zip test. \
-                  Re-downloading the full scene.')
-            if os.path.exists(filename):
-                os.remove(filename)
-                first_byte = 0
-
-            tries += 1
-            if tries == 11:
-                logging.info(
-                    f'Download of scene {filename.name} failed more than 10 '
-                    f'times. Not continuing.')
-            # otherwise we change the status to True
+    # actual download
+    with open(filename, "ab") as file:
+        if total_length is None:
+            file.write(response.content)
         else:
-            logger.info(f'{filename.name} passed the zip test.')
-            with open(str(f'{filename}.downloaded'), 'w+') as file:
-                file.write('successfully downloaded \n')
+            pbar = tqdm.tqdm(total=total_length, initial=first_byte,
+                             unit='B', unit_scale=True,
+                             desc=' INFO: Downloading ')
+
+            for chunk in response.iter_content(chunk_size):
+                if chunk:
+                    file.write(chunk)
+                    pbar.update(chunk_size)
+    pbar.close()
+
+    # updated fileSize
+    first_byte = os.path.getsize(filename)
+
+    logger.info(
+        f'Checking the zip archive of {filename.name} for inconsistency'
+    )
+
+    zip_test = h.check_zipfile(filename)
+
+    # if it did not pass the test, remove the file
+    # in the while loop it will be downloaded again
+    if zip_test is not None:
+        logger.info(f'{filename.name} did not pass the zip test. \
+              Re-downloading the full scene.')
+        if os.path.exists(filename):
+            os.remove(filename)
+            first_byte = 0
+    else:
+        logger.info(f'{filename.name} passed the zip test.')
+        with open(str(Path(filename).with_suffix('.downloaded')), 'w+') as file:
+            file.write('successfully downloaded \n')
 
 
 def batch_download(inventory_df, download_dir, uname, pword, concurrent=10):

@@ -142,7 +142,7 @@ def grd_project_class(some_bounds_grd, s1_grd_notnr, s1_grd_notnr_ost_product):
                                      product.month,
                                      product.day
                                      )
-        product.download_path(download_dir=Path(download_path))
+        product._download_path(download_dir=Path(download_path))
         os.makedirs(download_path, exist_ok=True)
         shutil.copy(s1_grd_notnr, download_path)
         shutil.move(

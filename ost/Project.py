@@ -686,7 +686,8 @@ class Sentinel1Batch(Sentinel1):
             timescan=False,
             mosaic=False,
             overwrite=False,
-            cut_to_aoi=False
+            cut_to_aoi=False,
+            to_tif=False,
     ):
         self.update_ard_parameters()
 
@@ -709,6 +710,7 @@ class Sentinel1Batch(Sentinel1):
             temp_dir=self.temp_dir,
             project_dict=self.config_dict,
             subset=self.aoi,
+            to_tif=to_tif,
             )
 
         # time-series part

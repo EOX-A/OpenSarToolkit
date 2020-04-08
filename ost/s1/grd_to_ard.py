@@ -358,6 +358,8 @@ def grd_to_ard(filelist,
     # write processed file to keep track of files already processed
     with open(opj(output_dir, '.processed'), 'w') as file:
         file.write('passed all tests \n')
+
+    return return_code, out_final + '.dim'
             
 
 def ard_to_rgb(infile, outfile, driver='GTiff', to_db=True):
@@ -383,7 +385,7 @@ def ard_to_rgb(infile, outfile, driver='GTiff', to_db=True):
         meta = co.meta
 
         # update meta
-        meta.update(driver=driver, count=3, nodata=0)
+        meta.update(driver=driver, count=3, nodata=0, compress='deflate')
 
         with rasterio.open(cross_pol) as cr:
             # !assure that dimensions match ####

@@ -177,20 +177,6 @@ class Sentinel1Scene:
         # delete credentials
         del uname, pword
 
-    # location of file (including diases)
-    def download_path(self, download_dir, mkdir=False):
-        download_path = Path(download_dir).joinpath(
-            f'SAR/{self.product_type}/{self.year}/{self.month}/{self.day}'
-        )
-        # make dir if not existent
-        if mkdir:
-            download_path.mkdir(parents=True, exist_ok=True)
-
-        # get filepath
-        filepath = download_path.joinpath(f'{self.scene_id}.zip')
-
-        self.product_dl_path = filepath
-
     def _creodias_path(self, data_mount='/eodata'):
 
         path = Path(data_mount).joinpath(
@@ -212,20 +198,28 @@ class Sentinel1Scene:
 
         return path
 
+    # location of file (including diases)
+    def _download_path(self, download_dir, mkdir=False):
+        download_path = Path(download_dir).joinpath(
+            f'SAR/{self.product_type}/{self.year}/{self.month}/{self.day}'
+        )
+        # make dir if not existent
+        if mkdir:
+            download_path.mkdir(parents=True, exist_ok=True)
+        # get filepath
+        filepath = download_path.joinpath(f'{self.scene_id}.zip')
+        return filepath
+
     def get_path(self, download_dir=None, data_mount=None):
-        if download_dir:
+        path = None
+        if download_dir is not None:
             if isinstance(download_dir, str):
                 download_dir = Path(download_dir)
-            self.download_path(download_dir=download_dir, mkdir=False)
-            if self.product_dl_path.with_suffix(
-                    '.downloaded').exists():
-                path = self.product_dl_path
-            else:
-                path = None
-        else:
-            path = None
+            product_dl_path = self._download_path(download_dir=download_dir, mkdir=False)
+            if product_dl_path.with_suffix('.downloaded').exists():
+                path = product_dl_path
 
-        if data_mount and not path:
+        if data_mount is not None and path is None:
             if isinstance(data_mount, str):
                 data_mount = Path(data_mount)
             if self._creodias_path(data_mount).joinpath(
@@ -233,8 +227,7 @@ class Sentinel1Scene:
                 path = self._creodias_path(data_mount)
             elif self._onda_path(data_mount).exists():
                 path = self._onda_path(data_mount)
-            else:
-                path = None
+
         if path is None:
             raise FileNotFoundError(
                 'No product path found for: {}'.format(self.scene_id)
