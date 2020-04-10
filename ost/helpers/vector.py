@@ -1,7 +1,13 @@
 import os
+from os.path import join as opj
+import numpy as np
 import sys
 import json
+import glob
 from functools import partial
+import rasterio
+import numpy.ma as ma
+from affine import Affine
 
 import osr
 import ogr
@@ -15,7 +21,87 @@ from shapely.geometry import Point, Polygon, mapping, shape
 from fiona import collection
 from fiona.crs import from_epsg
 
+from ost.helpers import helpers as h
+
 logger = logging.getLogger(__name__)
+
+
+def ls_to_vector(infile, out_path=None, driver="GPKG", buffer=2):
+    prefix = glob.glob(os.path.abspath(infile[:-4]) + '*data')[0]
+    if out_path is None:
+        out_path = prefix.replace('.data', '.gpkg')
+    if len(glob.glob(opj(prefix, '*layover_shadow*.img'))) == 1:
+        ls_mask = glob.glob(opj(prefix, '*layover_shadow*.img'))[0]
+    else:
+        ls_mask = None
+
+    if not ls_mask:
+        return None
+
+    features_gdf = gpd.GeoDataFrame()
+    features_gdf['geometry'] = None
+
+    with rasterio.open(ls_mask) as src:
+        ls_arr = ma.masked_array(
+            data=np.expand_dims(
+                buffer_array(np.where(src.read(1) > 0, 1, 0), buffer=buffer), axis=0
+            ).astype(np.uint8, copy=False),
+            mask=np.expand_dims(
+                buffer_array(np.where(src.read(1) > 0, 1, 0), buffer=buffer), axis=0
+            ).astype(np.bool, copy=False)
+        )
+        shapes = rasterio.features.shapes(ls_arr.data,
+                                          connectivity=4,
+                                          mask=ls_arr.mask,
+                                          transform=src.transform
+                                          )
+
+    geom = [shape(i) for i, v in shapes]
+    features_gdf = gpd.GeoDataFrame({'geometry': geom})
+    if features_gdf.empty:
+        return None
+    features_gdf.to_file(out_path, driver=driver)
+    h.delete_dimap(dimap_prefix=prefix.replace('.data', ''))
+    return out_path
+
+
+def buffer_array(arr, buffer=0):
+    """
+    Buffer True values of array.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Bool array.
+    buffer : int
+        Buffer in pixels around masked patches.
+
+    Returns
+    -------
+    np.ndarray
+    """
+    if not isinstance(arr, np.ndarray):
+        raise TypeError("not a NumPy array")
+    elif arr.ndim != 2:
+        raise TypeError("array not 2-dimensional")
+    elif arr.dtype != np.bool:
+        arr = arr.astype(np.bool)
+
+    if buffer == 0 or not arr.any():
+        return arr.astype(np.bool, copy=False)
+    else:
+        return rasterio.features.geometry_mask(
+            (
+                shape(p).buffer(buffer)
+                for p, v in
+            rasterio.features.shapes(arr.astype(np.uint8, copy=False), mask=arr)
+                if v
+            ),
+            arr.shape,
+            Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            invert=True
+        ).astype(np.bool, copy=False)
+
 
 def get_epsg(prjfile):
     '''Get the epsg code from a projection file of a shapefile

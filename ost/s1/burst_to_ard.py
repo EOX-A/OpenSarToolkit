@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 import json
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from ost.helpers import helpers as h
+from ost.helpers.vector import ls_to_vector
 from ost.helpers.errors import GPTRuntimeError
 from ost.generic import common_wrappers as common
 from ost.s1 import slc_wrappers as slc
@@ -31,7 +31,7 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
 
     # get relevant config parameters
     ard = config_dict['processing']['single_ARD']
-    cpus = config_dict['cpus_per_process']
+    gpt_cpus = config_dict['gpt_max_workers']
 
     # temp dir for intermediate files
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
@@ -48,7 +48,7 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
         # run polarimetric decomposition
         slc.ha_alpha(
             import_file, out_haa, haa_log, ard['remove_pol_speckle'],
-            ard['pol_speckle_filter'], cpus
+            ard['pol_speckle_filter'], gpt_cpus
         )
 
         # -------------------------------------------------------
@@ -63,7 +63,7 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
         # run geocoding
         common.terrain_correction(
             '{}.dim'.format(out_haa), out_htc, haa_tc_log,
-            ard['resolution'], ard['dem'], cpus
+            ard['resolution'], ard['dem'], gpt_cpus
         )
 
         # last check on the output files
@@ -93,7 +93,7 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
 
     # get relevant config parameters
     ard = config_dict['processing']['single_ARD']
-    cpus = config_dict['cpus_per_process']
+    gpt_cpus = config_dict['gpt_max_workers']
 
     # temp dir for intermediate files
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
@@ -110,7 +110,7 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
 
         # run calibration on imported scene
         slc.calibration(
-            import_file, out_cal, cal_log, ard, region='', ncores=cpus
+            import_file, out_cal, cal_log, ard, region='', ncores=gpt_cpus
         )
 
         # ---------------------------------------------------------------------
@@ -126,7 +126,7 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
             # run speckle filter on calibrated input
             common.speckle_filter(
                 f'{out_cal}.dim', speckle_import, speckle_log,
-                ard['speckle_filter'], cpus
+                ard['speckle_filter'], gpt_cpus
             )
 
             # remove input
@@ -146,7 +146,7 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
             db_log = out_dir.joinpath(f'{burst_prefix}_cal_db.err_log')
 
             # run db scaling on calibrated/speckle filtered input
-            common.linear_to_db(f'{out_cal}.dim', out_db, db_log, cpus)
+            common.linear_to_db(f'{out_cal}.dim', out_db, db_log, gpt_cpus)
 
             # remove tmp files
             h.delete_dimap(out_cal)
@@ -166,7 +166,7 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
         # run terrain correction on calibrated/speckle filtered/db  input
         common.terrain_correction(
             f'{out_cal}.dim', out_tc, tc_log,
-            ard['resolution'], ard['dem'], cpus
+            ard['resolution'], ard['dem'], gpt_cpus
         )
 
         # check for validity of final backscatter product
@@ -189,7 +189,7 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
             ls_log = out_dir.joinpath(f'{burst_prefix}_LS.err_log')
 
             # run ls mask generation on calibration
-            common.ls_mask(f'{out_cal}.dim', out_ls, ls_log, ard, cpus)
+            common.ls_mask(f'{out_cal}.dim', out_ls, ls_log, ard, gpt_cpus)
 
             # check for validity of final backscatter product
             try:
@@ -203,6 +203,15 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
         # write out check file for tracking that it is processed
         with open(out_dir.joinpath('.bs.processed'), 'w+') as file:
             file.write('passed all tests \n')
+
+    # Return colected files that have been processed
+    if ard['create_ls_mask'] is True:
+        out_ls_mask = out_ls + '.dim'
+        out_ls_mask = ls_to_vector(infile=out_ls_mask, driver='GPKG')
+    else:
+        out_ls_mask = None
+
+    return out_tc + '.dim', out_ls_mask
 
 
 def create_coherence_layers(
@@ -221,7 +230,7 @@ def create_coherence_layers(
 
     # get relevant config parameters
     ard = config_dict['processing']['single_ARD']
-    cpus = config_dict['cpus_per_process']
+    gpt_cpus = config_dict['gpt_max_workers']
 
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
 
@@ -237,7 +246,7 @@ def create_coherence_layers(
         # run co-registration
         slc.coreg(
             master_import, slave_import, out_coreg, coreg_log,
-            ard['dem'], cpus
+            ard['dem'], gpt_cpus
         )
 
         # remove imports
@@ -256,7 +265,7 @@ def create_coherence_layers(
         coh_log = out_dir.joinpath(f'{master_prefix}_coh.err_log')
 
         # run coherence estimation
-        slc.coherence(f'{out_coreg}.dim', out_coh, coh_log, ard, cpus)
+        slc.coherence(f'{out_coreg}.dim', out_coh, coh_log, ard, gpt_cpus)
 
         # remove coreg tmp files
         h.delete_dimap(out_coreg)
@@ -273,7 +282,7 @@ def create_coherence_layers(
         # run geocoding
         common.terrain_correction(
             f'{out_coh}.dim', out_tc, tc_log,
-            ard['resolution'], ard['dem'], cpus
+            ard['resolution'], ard['dem'], gpt_cpus
         )
 
         # ---------------------------------------------------------------
@@ -303,7 +312,7 @@ def burst_to_ard(burst, config_dict):
 
     ard = config_dict['processing']['single_ARD']
     temp_dir = Path(config_dict['temp_dir'])
-    cpus = config_dict['cpus_per_process']
+    gpt_cpus = config_dict['gpt_max_workers']
 
     # creation of out_directory
     out_dir = Path(burst.out_directory)
@@ -351,7 +360,7 @@ def burst_to_ard(burst, config_dict):
             # run import
             return_code = slc.burst_import(
                 master_file, master_import, import_log, swath,
-                master_burst_nr, polars, cpus
+                master_burst_nr, polars, gpt_cpus
             )
             if return_code != 0:
                 h.delete_dimap(master_import)
@@ -381,7 +390,7 @@ def burst_to_ard(burst, config_dict):
             polars = ard['polarisation'].replace(' ', '')
             return_code = slc.burst_import(
                 slave_file, slave_import, import_log, swath, slave_burst_nr,
-                polars, cpus
+                polars, gpt_cpus
             )
 
             if return_code != 0:

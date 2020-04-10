@@ -472,7 +472,6 @@ class Sentinel1Batch(Sentinel1):
                  beam_mode='IW',
                  polarisation='*',
                  ard_type='OST-GTC',
-                 cpus_per_process=2,
                  log_level=logging.INFO
                  ):
         # ------------------------------------------
@@ -483,12 +482,14 @@ class Sentinel1Batch(Sentinel1):
             product_type, beam_mode, polarisation,
             log_level
         )
-
         # ---------------------------------------
         # 1 Check and set ARD type
+        # Adjust the worker ammont based on product type
 
         # possible ard types to select from for GRD
         if product_type == 'GRD':
+            self.gpt_max_workers = os.cpu_count()
+            self.godale_max_workers = 1
             ard_types_grd = ['CEOS', 'Earth-Engine', 'OST-GTC', 'OST-RTC']
             if ard_type in ard_types_grd:
                 self.ard_type = ard_type
@@ -496,8 +497,10 @@ class Sentinel1Batch(Sentinel1):
                 raise ValueError('No valid ARD type for product type GRD.'
                                  f'Select from {ard_types_grd}')
 
-        # possible ard types to select from for GRD
+        # possible ard types to select from for SLC
         elif product_type == 'SLC':
+            self.gpt_max_workers = 1
+            self.godale_max_workers = os.cpu_count()
             ard_types_slc = ['OST-GTC', 'OST-RTC', 'OST-COH', 'OST-RTCCOH',
                              'OST-POL', 'OST-ALL']
 
@@ -520,7 +523,8 @@ class Sentinel1Batch(Sentinel1):
 
         # ---------------------------------------
         # 3 Add cpus_per_process
-        self.config_dict['cpus_per_process'] = cpus_per_process
+        self.config_dict['gpt_max_workers'] = self.gpt_max_workers
+        self.config_dict['godale_max_workers'] = self.godale_max_workers
 
         # ---------------------------------------
         # 4 Set up project JSON
@@ -600,6 +604,8 @@ class Sentinel1Batch(Sentinel1):
             overwrite=False,
             max_workers=1
     ):
+        if self.godale_max_workers:
+            max_workers = self.godale_max_workers
 
         # --------------------------------------------
         # 1 delete data from previous runnings
@@ -708,7 +714,7 @@ class Sentinel1Batch(Sentinel1):
             download_dir=self.download_dir,
             processing_dir=self.processing_dir,
             temp_dir=self.temp_dir,
-            project_dict=self.config_dict,
+            config_dict=self.config_dict,
             subset=self.aoi,
             to_tif=to_tif,
             )

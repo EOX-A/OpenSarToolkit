@@ -98,7 +98,7 @@ def remove_folder_content(folder):
             shutil.rmtree(os.path.join(root, d))
 
 
-def run_command(command, logfile=None, elapsed=True):
+def run_command(command, logfile=None, elapsed=True, silent=True):
     """ A helper function to execute a command line command
 
     Args:
@@ -109,10 +109,23 @@ def run_command(command, logfile=None, elapsed=True):
 
     currtime = time.time()
 
-    if os.name == 'nt':
-        process = subprocess.run(command, stderr=subprocess.PIPE)
+    if silent:
+        dev_null = open(os.devnull, 'w')
+        stderr = subprocess.STDOUT
     else:
-        process = subprocess.run(shlex.split(command), stderr=subprocess.PIPE)
+        stderr = subprocess.PIPE
+        dev_null = None
+
+    if os.name == 'nt':
+        process = subprocess.run(command,
+                                 stderr=stderr,
+                                 stdout=dev_null
+                                 )
+    else:
+        process = subprocess.run(shlex.split(command),
+                                 stderr=stderr,
+                                 stdout=dev_null
+                                 )
 
     return_code = process.returncode
 

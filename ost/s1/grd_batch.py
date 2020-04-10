@@ -62,7 +62,7 @@ def grd_to_ard_batch(
         download_dir,
         processing_dir,
         temp_dir,
-        project_dict,
+        config_dict,
         subset=None,
         to_tif=False,
 ):
@@ -98,9 +98,9 @@ def grd_to_ard_batch(
                     out_dir,
                     file_id,
                     temp_dir,
-                    project_dict['processing'],
+                    ard_params=config_dict['processing'],
                     subset=subset,
-                    ncores=project_dict['cpus_per_process']
+                    ncores=config_dict['gpt_max_workers']
                     )
                 if to_tif:
                     tif_file = ard_to_rgb(infile=out_file,

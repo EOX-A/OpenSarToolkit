@@ -1,8 +1,5 @@
 import os
-import sys
-import importlib
 import logging
-import json
 import glob
 import shutil
 import time
@@ -15,6 +12,7 @@ from os.path import join as opj
 
 from ost.generic import common_wrappers as common
 from ost.helpers import helpers as h, raster as ras
+from ost.helpers.vector import ls_to_vector
 from ost.helpers.errors import GPTRuntimeError
 from ost.helpers.settings import GPT_FILE, OST_ROOT
 
@@ -362,6 +360,7 @@ def grd_to_ard(filelist,
     # Return colected files that have been processed
     if ard['create_ls_mask'] is True:
         out_ls_mask = out_ls_mask + '.dim'
+        out_ls_mask = ls_to_vector(infile=out_ls_mask, driver='GPKG')
     else:
         out_ls_mask = None
 
@@ -385,7 +384,7 @@ def ard_to_rgb(infile, outfile, driver='GTiff', to_db=True):
         cross_pol = glob.glob(opj(prefix, '*HV*.img'))[0]
 
     # !!!!assure and both pols exist!!!
-    with rasterio.open(co_pol) as co:
+    with rasterio.open(co_pol) as co, rasterio.open(cross_pol) as cr:
 
         # get meta data
         meta = co.meta
@@ -393,38 +392,37 @@ def ard_to_rgb(infile, outfile, driver='GTiff', to_db=True):
         # update meta
         meta.update(driver=driver, count=3, nodata=0, compress='deflate')
 
-        with rasterio.open(cross_pol) as cr:
-            # !assure that dimensions match ####
-            with rasterio.open(outfile, 'w', **meta) as dst:
-                if co.shape != cr.shape:
-                    print(' dimensions do not match')
-                # loop through blocks
-                for i, window in co.block_windows(1):
+        # !assure that dimensions match ####
+        with rasterio.open(outfile, 'w', **meta) as dst:
+            if co.shape != cr.shape:
+                print(' dimensions do not match')
+            # loop through blocks
+            for i, window in co.block_windows(1):
 
-                    # read arrays and turn to dB (in case it isn't)
-                    co_array = co.read(window=window)
-                    cr_array = cr.read(window=window)
+                # read arrays and turn to dB (in case it isn't)
+                co_array = co.read(window=window)
+                cr_array = cr.read(window=window)
 
-                    if to_db:
-                        # turn to db
-                        co_array = ras.convert_to_db(co_array)
-                        cr_array = ras.convert_to_db(cr_array)
+                if to_db:
+                    # turn to db
+                    co_array = ras.convert_to_db(co_array)
+                    cr_array = ras.convert_to_db(cr_array)
 
-                        # adjust for dbconversion
-                        co_array[co_array == -130] = 0
-                        cr_array[cr_array == -130] = 0
+                    # adjust for dbconversion
+                    co_array[co_array == -130] = 0
+                    cr_array[cr_array == -130] = 0
 
-                    # turn 0s to nan
-                    co_array[co_array == 0] = np.nan
-                    cr_array[cr_array == 0] = np.nan
+                # turn 0s to nan
+                co_array[co_array == 0] = np.nan
+                cr_array[cr_array == 0] = np.nan
 
-                    # create log ratio by subtracting the dbs
-                    ratio_array = np.subtract(co_array, cr_array)
+                # create log ratio by subtracting the dbs
+                ratio_array = np.subtract(co_array, cr_array)
 
-                    # write file
-                    for k, arr in [(1, co_array), (2, cr_array),
-                                   (3, ratio_array)]:
-                        dst.write(arr[0, ], indexes=k, window=window)
+                # write file
+                for k, arr in [(1, co_array), (2, cr_array),
+                               (3, ratio_array)]:
+                    dst.write(arr[0, ], indexes=k, window=window)
     return outfile
 
 
