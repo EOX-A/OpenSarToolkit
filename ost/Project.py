@@ -482,6 +482,8 @@ class Sentinel1Batch(Sentinel1):
             product_type, beam_mode, polarisation,
             log_level
         )
+
+        self.executor_type = 'concurrent_processes'
         # ---------------------------------------
         # 1 Check and set ARD type
         # Adjust the worker ammont based on product type
@@ -642,33 +644,50 @@ class Sentinel1Batch(Sentinel1):
         # --------------------------------------------
         # 5 run the burst to ard batch routine
         burst_batch.bursts_to_ards(
-            self.burst_inventory, self.config_file, max_workers=max_workers
+            self.burst_inventory,
+            self.config_file,
+            max_workers=max_workers,
+            executor_type=self.executor_type
         )
         # --------------------------------------------
         # 6 run the timeseries creation
         if timeseries or timescan:
             burst_batch.ards_to_timeseries(
-                self.burst_inventory, self.config_file, max_workers=max_workers
+                self.burst_inventory,
+                self.config_file,
+                max_workers=max_workers,
+                executor_type=self.executor_type
             )
 
         # --------------------------------------------
         # 7 run the timescan creation
         if timescan:
             burst_batch.timeseries_to_timescan(
-                self.burst_inventory, self.config_file
+                self.burst_inventory,
+                self.config_file,
+                max_workers=max_workers,
+                executor_type=self.executor_type
             )
 
         # --------------------------------------------
         # 8 mosaic the time-series
         if mosaic and timeseries:
             burst_batch.mosaic_timeseries(
-                self.burst_inventory, self.config_file
+                self.burst_inventory,
+                self.config_file,
+                max_workers=max_workers,
+                executor_type=self.executor_type
             )
 
         # --------------------------------------------
         # 9 mosaic the timescans
         if mosaic and timescan:
-            burst_batch.mosaic_timescan(self.burst_inventory, self.config_file)
+            burst_batch.mosaic_timescan(
+                self.burst_inventory,
+                self.config_file,
+                max_workers=max_workers,
+                executor_type=self.executor_type
+            )
 
     def create_timeseries_animation(
             self,
