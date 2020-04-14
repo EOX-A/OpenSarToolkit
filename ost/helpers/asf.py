@@ -1,21 +1,18 @@
-# -*- coding: utf-8 -*-
-'''This module provides functions for connecting and downloading
-from Alaska satellite Faciltity's Vertex server
-'''
-
 import os
-from os.path import join as opj
-import glob
 import logging
 import requests
 import tqdm
-import multiprocessing
 from pathlib import Path
+from retrying import retry
+
+from godale import Executor
 
 from ost.helpers import helpers as h
+from ost.helpers.errors import DownloadError
 from ost import Sentinel1Scene as S1Scene
 
 logger = logging.getLogger(__name__)
+
 
 # we need this class for earthdata access
 class SessionWithHeaderRedirection(requests.Session):
@@ -75,6 +72,7 @@ def check_connection(uname, pword):
     return response.status_code
 
 
+@retry(stop_max_attempt_number=5)
 def s1_download(argument_list):
     """
     This function will download S1 products from ASF mirror.
@@ -122,85 +120,85 @@ def s1_download(argument_list):
         if total_length is None:
             file.write(response.content)
         else:
-            pbar = tqdm.tqdm(total=total_length, initial=first_byte,
-                             unit='B', unit_scale=True,
-                             desc=' INFO: Downloading ')
+            try:
+                pbar = tqdm.tqdm(total=total_length, initial=first_byte,
+                                 unit='B', unit_scale=True,
+                                 desc='INFO: Downloading ')
 
-            for chunk in response.iter_content(chunk_size):
-                if chunk:
-                    file.write(chunk)
-                    pbar.update(chunk_size)
-    pbar.close()
-
-    # updated fileSize
-    first_byte = os.path.getsize(filename)
+                for chunk in response.iter_content(chunk_size):
+                    if chunk:
+                        file.write(chunk)
+                        pbar.update(chunk_size)
+            finally:
+                pbar.close()
 
     logger.info(
         f'Checking the zip archive of {filename.name} for inconsistency'
     )
-
     zip_test = h.check_zipfile(filename)
 
     # if it did not pass the test, remove the file
     # in the while loop it will be downloaded again
     if zip_test is not None:
-        logger.info(f'{filename.name} did not pass the zip test. \
-              Re-downloading the full scene.')
         if os.path.exists(filename):
             os.remove(filename)
-            first_byte = 0
+        raise DownloadError(f'{filename.name} did not pass the zip test. \
+              Re-downloading the full scene.')
     else:
         logger.info(f'{filename.name} passed the zip test.')
         with open(str(Path(filename).with_suffix('.downloaded')), 'w+') as file:
             file.write('successfully downloaded \n')
 
 
-def batch_download(inventory_df, download_dir, uname, pword, concurrent=10):
+def batch_download(inventory_df,
+                   download_dir,
+                   uname,
+                   pword,
+                   max_workers=10,
+                   executor_type='concurrent_threads'
+                   ):
 
     # create list with scene ids to download
     scenes = inventory_df['identifier'].tolist()
 
     # initialize check variables and loop until fulfilled
-    check, i = False, 1
-    while check is False and i <= 10:
+    asf_list = []
+    for scene_id in scenes:
 
-        asf_list = []
-        for scene_id in scenes:
+        # initialize scene instance and get destination filepath
+        scene = S1Scene(scene_id)
+        filepath = scene._download_path(download_dir, True)
 
-            # initialize scene instance and get destination filepath
-            scene = S1Scene(scene_id)
-            filepath = scene._download_path(download_dir, True)
+        # check if already downloaded
+        if Path(f'{filepath}.downloaded').exists():
+            logger.info(f'{scene.scene_id} has been already downloaded.')
+            continue
 
-            # check if already downloaded
-            if Path(f'{filepath}.downloaded').exists():
-                logger.info(f'{scene.scene_id} has been already downloaded.')
-                continue
+        # append to list
+        asf_list.append([scene.asf_url(), filepath, uname, pword])
 
-            # append to list
-            asf_list.append([scene.asf_url(), filepath, uname, pword])
+    check_counter = 0
+    # if list is not empty, do parallel download
+    if asf_list:
+        executor = Executor(max_workers=max_workers, executor=executor_type)
+        for task in executor.as_completed(
+                func=s1_download,
+                iterable=asf_list,
+                fargs=[]
+        ):
+            task.result()
+            check_counter += 1
 
-        # if list is not empty, do parallel download
-        if asf_list:
-            pool = multiprocessing.Pool(processes=concurrent)
-            pool.map(s1_download, asf_list)
-
-        # count downloaded scenes with its checked file
-        downloaded_scenes = len(list(download_dir.glob('**/*.zip.downloaded')))
-
-        # if all have been downloaded then we are through
-        if len(inventory_df['identifier'].tolist()) == downloaded_scenes:
-            check = True
-            logger.info('All products are downloaded.')
-        # else we
-        else:
-            check = False
-            for scene in scenes:
-
-                # we check if outputfile exists...
-                scene = S1Scene(scene)
-                filepath = scene._download_path(download_dir)
-                if Path(f'{str(filepath)}.downloaded').exists():
-                    # ...and remove from list
-                    scenes.remove(scene.scene_id)
-
-        i += 1
+    # if all have been downloaded then we are through
+    if len(inventory_df['identifier'].tolist()) == check_counter:
+        logger.info('All products are downloaded.')
+    # else we
+    else:
+        for scene in scenes:
+            # we check if outputfile exists...
+            scene = S1Scene(scene)
+            filepath = scene._download_path(download_dir)
+            if Path(f'{str(filepath)}.downloaded').exists():
+                # ...and remove from list
+                scenes.remove(scene.scene_id)
+        raise DownloadError('ASF download is incomplete or has failed.')

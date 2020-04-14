@@ -85,7 +85,6 @@ def test_asf_download(s1_grd_notnr_ost_product, mirror=2):
         from ost.helpers.helpers import check_zipfile
         product_path = s1_grd_notnr_ost_product[1].get_path(
             download_dir=temp,
-            data_mount='/eodata'
         )
         return_code = check_zipfile(product_path)
         assert return_code is None

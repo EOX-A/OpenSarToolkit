@@ -1,7 +1,6 @@
 import os
 import json
 import glob
-import importlib
 
 import logging
 import rasterio
@@ -15,7 +14,7 @@ from pathlib import Path
 from ost.helpers import vector as vec, raster as ras
 from ost.helpers import scihub, helpers as h
 from ost.helpers.settings import set_log_level, setup_logfile, OST_ROOT
-from ost.helpers.settings import check_ard_parameters
+from ost.helpers.settings import check_ard_parameters, HERBERT_USER
 
 from ost.s1 import burst_inventory, burst_batch
 from ost.s1 import search, refine, download, grd_batch
@@ -166,6 +165,8 @@ class Sentinel1(Generic):
                  product_type='*',
                  beam_mode='*',
                  polarisation='*',
+                 username=None,
+                 password=None,
                  log_level=logging.INFO
                  ):
 
@@ -176,6 +177,11 @@ class Sentinel1(Generic):
             download_dir, inventory_dir, processing_dir, temp_dir, data_mount,
             log_level
         )
+        if username is None:
+            self.uname = HERBERT_USER['uname']
+        if password is None:
+            self.scihub_pword = HERBERT_USER['pword']
+            self.asf_pword = HERBERT_USER['asf_pword']
 
         # ------------------------------------------
         # 2 Check and set product type
@@ -275,7 +281,8 @@ class Sentinel1(Generic):
 
         if not uname or not pword:
             # ask for username and password
-            uname, pword = scihub.ask_credentials()
+            uname = self.uname
+            pword = self.scihub_pword
 
         # do the search
         if outfile == 'full.inventory.gpkg':
@@ -288,12 +295,13 @@ class Sentinel1(Generic):
         search.scihub_catalogue(
             query, self.inventory_file, append, uname, pword
         )
+        del uname, pword
 
         if self.inventory_file.exists():
             # read inventory into the inventory attribute
             self.read_inventory()
         else:
-            print('No images found in the AOI for this date range')
+            logger.info('No images found in the AOI for this date range')
 
     def read_inventory(self):
         """Read the Sentinel-1 data inventory from a OST invetory shapefile
@@ -381,13 +389,21 @@ class Sentinel1(Generic):
                 self.download_dir,
                 mirror=mirror,
                 concurrent=concurrent,
-                uname=uname,
-                pword=pword
+                uname=self.uname,
+                pword=self.asf_pword
             )
 
-    def create_burst_inventory(self, inventory_df=None, refine=True,
-                               outfile=None, uname=None, pword=None):
-
+    def create_burst_inventory(self,
+                               inventory_df=None,
+                               refine=True,
+                               outfile=None,
+                               uname=None,
+                               pword=None
+                               ):
+        if uname is None:
+            uname = self.uname
+        if pword is None:
+            pword = self.scihub_pword
         # assert SLC product type
         if not self.product_type == 'SLC':
             raise ValueError(
@@ -416,6 +432,7 @@ class Sentinel1(Generic):
             data_mount=self.data_mount,
             uname=uname, pword=pword
         )
+        del uname, pword
 
         # refine the burst inventory
         if refine:

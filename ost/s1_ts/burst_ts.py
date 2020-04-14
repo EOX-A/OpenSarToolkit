@@ -5,7 +5,6 @@ import logging
 import multiprocessing as mp
 from pathlib import Path
 
-
 from ost.helpers import raster as ras
 from ost.generic import ard_to_ts, ts_extent, ts_ls_mask, timescan, mosaic
 

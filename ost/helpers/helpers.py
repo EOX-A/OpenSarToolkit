@@ -273,16 +273,13 @@ def check_zipfile(filename):
     try:
         zip_archive = zipfile.ZipFile(filename)
     except zipfile.BadZipFile as er:
-        print('Error: {}'.format(er))
-        return 1
+        raise er
 
     try:
         zip_test = zip_archive.testzip()
     except:
-        print('Error')
-        return 1
+        raise TypeError
     else:
-        print(zip_test)
         return zip_test
 
 

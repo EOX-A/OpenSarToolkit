@@ -171,9 +171,12 @@ class Sentinel1Scene:
             download.download_sentinel1(df, download_dir, mirror)
             return
 
-        download.download_sentinel1(df, download_dir, mirror,
-                                    uname=uname, pword=pword)
-
+        download.download_sentinel1(df,
+                                    download_dir,
+                                    mirror,
+                                    uname=uname,
+                                    pword=pword
+                                    )
         # delete credentials
         del uname, pword
 

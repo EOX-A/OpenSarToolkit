@@ -1,24 +1,21 @@
-# -*- coding: utf-8 -*-
-'''
-This module provides functions for searching and downloading data from
-Copernicus scihub server.
-'''
-
 import os
-from os.path import join as opj
-import glob
 import getpass
 import datetime
-import multiprocessing
 import urllib
 import requests
 import tqdm
+from pathlib import Path
 import logging
 from shapely.wkt import loads
+from retrying import retry
 
+from godale import Executor
+
+from ost.helpers.errors import DownloadError
 from ost.helpers import helpers as h
 
 logger = logging.getLogger(__name__)
+
 
 def ask_credentials():
     '''A helper function that asks for user credentials on Copernicus' Scihub
@@ -232,6 +229,7 @@ def check_connection(uname, pword):
     return response.status_code
 
 
+@retry(stop_max_attempt_number=7, wait_fixed=5)
 def s1_download(argument_list):
     '''Function to download a single Sentinel-1 product from Copernicus scihub
 
@@ -259,7 +257,7 @@ def s1_download(argument_list):
               ' account go to: https://scihub.copernicus.eu')
         uname = input(' Your Copernicus Scihub Username:')
     if not pword:
-        pword = getpass.getpass(' Your Copernicus Scihub Password:')
+        pword = getpass.getpass('Your Copernicus Scihub Password:')
 
     # define url
     url = ('https://scihub.copernicus.eu/apihub/odata/v1/'
@@ -270,10 +268,11 @@ def s1_download(argument_list):
 
     # check response
     if response.status_code == 401:
-        raise ValueError(' ERROR: Username/Password are incorrect.')
+        raise ValueError('Username/Password are incorrect.')
     elif response.status_code != 200:
-        print(' ERROR: Something went wrong, will try again in 30 seconds.')
-        response.raise_for_status()
+        raise ValueError(
+            'Something went wrong, will try again. Response code: ', response.status_code
+        )
 
     # get download size
     total_length = int(response.headers.get('content-length', 0))
@@ -290,103 +289,96 @@ def s1_download(argument_list):
     if first_byte >= total_length:
         return total_length
 
-    zip_test = 1
-    while zip_test is not None:
+    # get byte offset for already downloaded file
+    header = {"Range": "bytes={}-{}".format(first_byte, total_length)}
 
-        while first_byte < total_length:
+    logger.info('Downloading scene to: {}'.format(filename))
+    response = requests.get(url, headers=header, stream=True,
+                            auth=(uname, pword))
 
-            # get byte offset for already downloaded file
-            header = {"Range": "bytes={}-{}".format(first_byte, total_length)}
-
-            logger.info('Downloading scene to: {}'.format(filename))
-            response = requests.get(url, headers=header, stream=True,
-                                    auth=(uname, pword))
-
-            # actual download
-            with open(filename, "ab") as file:
-
-                if total_length is None:
-                    file.write(response.content)
-                else:
-                    pbar = tqdm.tqdm(total=total_length, initial=first_byte,
-                                     unit='B', unit_scale=True,
-                                     desc=' INFO: Downloading: ')
-                    for chunk in response.iter_content(chunk_size):
-                        if chunk:
-                            file.write(chunk)
-                            pbar.update(chunk_size)
-            pbar.close()
-            # update first_byte
-            first_byte = os.path.getsize(filename)
-
-        # zipFile check
-        logger.info('Checking the zip archive of {} for inconsistency'.format(
-            filename))
-        zip_test = h.check_zipfile(filename)
-        
-        # if it did not pass the test, remove the file
-        # in the while loop it will be downlaoded again
-        if zip_test is not None:
-            logger.info('{} did not pass the zip test. \
-                  Re-downloading the full scene.'.format(filename))
-            os.remove(filename)
-            first_byte = 0
-        # otherwise we change the status to True
+    # actual download
+    with open(filename, "ab") as file:
+        if total_length is None:
+            file.write(response.content)
         else:
-            logger.info('{} passed the zip test.'.format(filename))
-            with open(str('{}.downloaded'.format(filename)), 'w') as file:
-                file.write('successfully downloaded \n')
+            try:
+                pbar = tqdm.tqdm(total=total_length, initial=first_byte,
+                                 unit='B', unit_scale=True,
+                                 desc='INFO: Downloading: ')
+                for chunk in response.iter_content(chunk_size):
+                    if chunk:
+                        file.write(chunk)
+                        pbar.update(chunk_size)
+            finally:
+                pbar.close()
+
+    # zipFile check
+    logger.info('Checking the zip archive of {} for inconsistency'.format(
+        filename))
+    zip_test = h.check_zipfile(filename)
+
+    # if it did not pass the test, remove the file
+    # in the while loop it will be downlaoded again
+    if zip_test is not None:
+        if os.path.exists(filename):
+            os.remove(filename)
+        raise DownloadError(f'{filename.name} did not pass the zip test. \
+              Re-downloading the full scene.')
+    # otherwise we change the status to True
+    else:
+        logger.info(f'{filename.name} passed the zip test.')
+        with open(str(Path(filename).with_suffix('.downloaded')), 'w+') as file:
+            file.write('successfully downloaded \n')
 
 
-def batch_download(inventory_df, download_dir, uname, pword, concurrent=2):
+def batch_download(inventory_df,
+                   download_dir,
+                   uname,
+                   pword,
+                   max_workers=2,
+                   executor_type='concurrent_threads'
+                   ):
 
     from ost import Sentinel1Scene as S1Scene
     from ost.helpers import scihub
     
     # create list of scenes
     scenes = inventory_df['identifier'].tolist()
-    
-    check, i = False, 1
-    while check is False and i <= 10:
 
-        download_list = []
-        for scene_id in scenes:
-            scene = S1Scene(scene_id)
-            filepath = scene._download_path(download_dir, True)
-            
-            try:
-                uuid = (inventory_df['uuid']
-                    [inventory_df['identifier'] == scene_id].tolist())
-            except KeyError:
-                uuid = [scene.scihub_uuid(scihub.connect(
-                    uname=uname, pword=pword)
-                )]
-            if os.path.exists('{}.downloaded'.format(filepath)):
-                logger.info('{} is already downloaded.'
-                      .format(scene.scene_id))
-            else:
-                # create list objects for download
-                download_list.append([uuid[0], filepath, uname, pword])
+    download_list = []
+    for scene_id in scenes:
+        scene = S1Scene(scene_id)
+        filepath = scene._download_path(download_dir, True)
 
-        if download_list:
-            pool = multiprocessing.Pool(processes=concurrent)
-            pool.map(s1_download, download_list)
-                    
-        downloaded_scenes = glob.glob(
-            opj(download_dir, 'SAR', '*', '20*', '*', '*',
-                '*.zip.downloaded'))
-    
-        if len(inventory_df['identifier'].tolist()) == len(downloaded_scenes):
-            logger.info('All products are downloaded.')
-            check = True
+        try:
+            uuid = (inventory_df['uuid']
+                [inventory_df['identifier'] == scene_id].tolist())
+        except KeyError:
+            uuid = [scene.scihub_uuid(scihub.connect(
+                uname=uname, pword=pword)
+            )]
+        if os.path.exists('{}.downloaded'.format(filepath)):
+            logger.info('{} is already downloaded.'.format(scene.scene_id))
         else:
-            check = False
-            for scene in scenes:
+            # create list objects for download
+            download_list.append([uuid[0], filepath, uname, pword])
+    check_counter = 0
+    if download_list:
+        executor = Executor(max_workers=max_workers, executor=executor_type)
+        for task in executor.as_completed(
+                func=s1_download,
+                iterable=download_list,
+                fargs=[]
+        ):
+            task.result()
+            check_counter += 1
 
-                scene = S1Scene(scene)
-                filepath = scene._download_path(download_dir)
-
-                if os.path.exists('{}.downloaded'.format(filepath)):
-                    scenes.remove(scene.scene_id)
-
-        i += 1
+    if len(inventory_df['identifier'].tolist()) == check_counter:
+        logger.info('All products are downloaded.')
+    else:
+        for scene in scenes:
+            scene = S1Scene(scene)
+            filepath = scene._download_path(download_dir)
+            if os.path.exists('{}.downloaded'.format(filepath)):
+                scenes.remove(scene.scene_id)
+        raise DownloadError('Scihub download is incomplete or has failed.')
