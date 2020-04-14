@@ -41,8 +41,8 @@ def bursts_to_ards(
         config_dict = json.load(file)
     # we update max_workers in case we have less cpus_per_process
     # then cpus available
-    if max_workers == 1 and config_dict['cpus_per_process'] < os.cpu_count():
-        max_workers = int(os.cpu_count() / config_dict['cpus_per_process'])
+    if max_workers == 1 and config_dict['gpt_max_workers'] < os.cpu_count():
+        max_workers = int(os.cpu_count() / config_dict['gpt_max_workers'])
 
     # now we run with godale, which works also with 1 worker
     executor = Executor(executor=executor_type, max_workers=max_workers)

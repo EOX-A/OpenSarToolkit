@@ -489,6 +489,8 @@ class Sentinel1Batch(Sentinel1):
                  beam_mode='IW',
                  polarisation='*',
                  ard_type='OST-GTC',
+                 username=None,
+                 password=None,
                  log_level=logging.INFO
                  ):
         # ------------------------------------------
@@ -496,7 +498,7 @@ class Sentinel1Batch(Sentinel1):
         super().__init__(
             project_dir, aoi, start, end,
             download_dir, inventory_dir, processing_dir, temp_dir, data_mount,
-            product_type, beam_mode, polarisation,
+            product_type, beam_mode, polarisation, username, password,
             log_level
         )
 
