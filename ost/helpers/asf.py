@@ -9,7 +9,7 @@ from godale import Executor
 
 from ost.helpers import helpers as h
 from ost.helpers.errors import DownloadError
-from ost import Sentinel1Scene as S1Scene
+from ost.s1.s1scene import Sentinel1Scene as S1Scene
 
 logger = logging.getLogger(__name__)
 

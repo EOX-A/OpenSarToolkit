@@ -370,7 +370,7 @@ def check_availability(inventory_gdf, download_dir, data_mount):
        available through a mount point on DIAS cloud
     
     '''
-    from ost import Sentinel1Scene
+    from ost.s1.s1scene import Sentinel1Scene
     # add download path, or set to None if not found
     for i, row in inventory_gdf.iterrows():
         try:

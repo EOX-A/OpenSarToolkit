@@ -339,7 +339,7 @@ def batch_download(inventory_df,
                    executor_type='concurrent_threads'
                    ):
 
-    from ost import Sentinel1Scene as S1Scene
+    from ost.s1.s1scene import Sentinel1Scene as S1Scene
     from ost.helpers import scihub
     
     # create list of scenes

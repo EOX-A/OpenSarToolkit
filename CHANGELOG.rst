@@ -6,6 +6,16 @@ Changelog
 -----
 0.9.5
 -----
+* godale for batch Download
+* added get_bursts_by_polygon in s1.burst_inventory function
+* added np_binary_erosion in helpers.raster function
+* added Depre. Warning to PEPS and ONDA, scihub and ASF as default search and dl
+* added a DownloadError as general custom DL error
+* added SLC processing to the Sentinel1Scene class
+    * also added a test for it
+* also conversion of GRD and SLC to RGB GeoTiffs (core functions now in ost.s1.ard_to_rgb.py)
+* defined a default OST Geotiff profile for rasterio in settings/py
+* Project class now gets HERBERT for search and download as default
 * renamed the number of cores to be used for GPT and regular concurency to:
     * config_dict['gpt_max_workers']
     * config_dict['godale_max_workers']

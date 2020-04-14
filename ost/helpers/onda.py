@@ -193,7 +193,7 @@ def s1_download(argument_list):
             
 def batch_download(inventory_df, download_dir, uname, pword, concurrent=2):
     
-    from ost import Sentinel1Scene as S1Scene
+    from ost.s1.s1scene import Sentinel1Scene as S1Scene
     from ost.helpers import onda
     
     # create list of scenes

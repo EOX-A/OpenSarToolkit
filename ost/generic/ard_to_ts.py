@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import json
 import logging
 import gdal
@@ -13,24 +11,25 @@ from ost.helpers import raster as ras, helpers as h
 logger = logging.getLogger(__name__)
 
 
-def ard_to_ts(list_of_args):
-
+def ard_to_ts(
+        list_of_files,
+        burst,
+        product,
+        pol,
+        config_dict
+):
     # -------------------------------------------
-    # 1 unpack list of args
-    list_of_files, burst, product, pol, project_file = list_of_args
     # convert list of files readable for snap
     list_of_files = f"\'{','.join(str(x) for x in list_of_files)}\'"
 
     # -------------------------------------------
-    # 2 read config file
-    with open(project_file, 'r') as file:
-        project_params = json.load(file)
-        processing_dir = project_params['project']['processing_dir']
-        temp_dir = project_params['project']['temp_dir']
-        cpus_per_process = project_params['project']['cpus_per_process']
-        ard_params = project_params['processing']
-        ard = ard_params['single_ARD']
-        ard_mt = ard_params['time-series_ARD']
+    # 2 read config dict
+    processing_dir = config_dict['project']['processing_dir']
+    temp_dir = config_dict['project']['temp_dir']
+    cpus_per_process = config_dict['project']['cpus_per_process']
+    ard_params = config_dict['processing']
+    ard = config_dict['single_ARD']
+    ard_mt = config_dict['time-series_ARD']
 
     # -------------------------------------------
     # 3 get namespace of directories and check if already processed

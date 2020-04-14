@@ -1,9 +1,3 @@
-#! /usr/bin/env python
-"""
-This script provides wrapper functions for processing Sentinel-1 GRD products.
-"""
-
-# import stdlib modules
 import os
 from os.path import join as opj
 import numpy as np
@@ -21,17 +15,6 @@ import rasterio.mask
 from rasterio.features import shapes
 
 from ost.helpers import helpers as h
-
-# script infos
-__author__ = 'Andreas Vollrath'
-__copyright__ = 'phi-lab, European Space Agency'
-
-__license__ = 'GPL'
-__version__ = '1.0'
-__maintainer__ = 'Andreas Vollrath'
-__email__ = ''
-__status__ = 'Production'
-
 
 
 def replace_value(rasterfn, value_to_replace, new_value):
@@ -512,3 +495,47 @@ def create_timeseries_animation(timeseries_folder, product_list, out_folder,
             os.remove(file)
             if os.path.isfile(file + '.aux.xml'):
                 os.remove(file + '.aux.xml')
+
+
+def np_binary_erosion(
+        input_array,
+        structure=np.ones((3, 3)).astype(np.bool)
+):
+    '''NumPy binary erosion function
+    No error checking on input array (type)
+    No error checking on structure element (# of dimensions, shape, type, etc.)
+    Args:
+    input_array: Binary NumPy array to be eroded. Non-zero (True) elements
+        form the subset to be eroded
+    structure: Structuring element used for the erosion. Non-zero elements
+        are considered True. If no structuring element is provided, an
+        element is generated with a square connectivity equal to two
+        (square, not cross).
+    Returns:
+        binary_erosion: Erosion of the input by the stucturing element
+    '''
+    bands, rows, cols = input_array.shape
+    input_shape = (rows, cols)
+
+    # Pad output array (binary_erosion) with extra cells around the edge
+    # so that structuring element will fit without wrapping.
+    # A 3x3 structure, will need 1 additional cell around the edge
+    # A 5x5 structure, will need 2 additional cells around the edge
+    pad_shape = (
+        input_shape[0] + structure.shape[0] - 1,
+        input_shape[1] + structure.shape[1] - 1
+    )
+    input_pad_array = np.zeros(pad_shape).astype(np.bool)
+    input_pad_array[1:rows+1, 1:cols+1] = input_array
+    binary_erosion = np.zeros(pad_shape).astype(np.bool)
+
+    # Cast structure element to boolean
+    struc_mask = structure.astype(np.bool)
+    # Iterate over each cell
+    for row in range(rows):
+        for col in range(cols):
+            # The value of the output pixel is the minimum value of all the
+            # pixels in the input pixel's neighborhood.
+            binary_erosion[row+1, col+1] = np.min(
+                input_pad_array[row:row+3, col:col+3][struc_mask])
+    return binary_erosion[1:rows+1, 1:cols+1]

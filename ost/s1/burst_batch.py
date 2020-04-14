@@ -1,16 +1,11 @@
 import os
-import json
-import itertools
 import logging
-import multiprocessing as mp
-from pathlib import Path
 
 from godale._concurrent import Executor
 
-from ost.helpers import raster as ras
-from ost.s1.burst_inventory import prepare_burst_inventory
 from ost.s1.burst_to_ard import burst_to_ard
-from ost.generic import ard_to_ts, ts_extent, ts_ls_mask, timescan, mosaic
+from ost.s1 import burst_inventory
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,30 +20,30 @@ PRODUCT_LIST = [
 
 def bursts_to_ards(
         burst_gdf,
-        config_file,
+        config_dict,
         executor_type='concurrent_processes',
         max_workers=1
 ):
-
-    print('--------------------------------------------------------------')
     logger.info('Processing all single bursts to ARD')
-    print('--------------------------------------------------------------')
+    proc_inventory = burst_inventory.prepare_burst_inventory(burst_gdf, config_dict)
 
-    logger.info('Preparing the processing pipeline. This may take a moment.')
-    proc_inventory = prepare_burst_inventory(burst_gdf, config_file)
-
-    with open(config_file, 'r') as file:
-        config_dict = json.load(file)
-    # we update max_workers in case we have less cpus_per_process
+    # we update max_workers in case we have less gpt_max_workers
     # then cpus available
     if max_workers == 1 and config_dict['gpt_max_workers'] < os.cpu_count():
         max_workers = int(os.cpu_count() / config_dict['gpt_max_workers'])
 
+    out_files = {'bs': [], 'ls': [], 'coh': [], 'pol': []}
     # now we run with godale, which works also with 1 worker
     executor = Executor(executor=executor_type, max_workers=max_workers)
     for task in executor.as_completed(
             func=burst_to_ard,
             iterable=proc_inventory.iterrows(),
-            fargs=[str(config_file), ]
+            fargs=[config_dict]
     ):
-        task.result()
+        out_bs, out_ls, out_coh, out_pol = task.result()
+        out_files['bs'].append(out_bs)
+        out_files['ls'].append(out_ls)
+        out_files['coh'].append(out_coh)
+        out_files['pol'].append(out_pol)
+
+    return out_files

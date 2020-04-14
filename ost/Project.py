@@ -664,7 +664,7 @@ class Sentinel1Batch(Sentinel1):
         # 5 run the burst to ard batch routine
         burst_batch.bursts_to_ards(
             self.burst_inventory,
-            self.config_file,
+            self.config_dict,
             max_workers=max_workers,
             executor_type=self.executor_type
         )
@@ -739,13 +739,6 @@ class Sentinel1Batch(Sentinel1):
             logger.info('Deleting processing folder to start from scratch')
             h.remove_folder_content(self.processing_dir)
 
-        # set resolution in degree
-        #        self.center_lat = loads(self.aoi).centroid.y
-        #        if float(self.center_lat) > 59 or float(self.center_lat) < -59:
-        #            logger.info('Scene is outside SRTM coverage. Will use 30m ASTER'
-        #                  ' DEM instead.')
-        #            self.ard_parameters['dem'] = 'ASTER 1sec GDEM'
-
         # the grd to ard batch routine
         self.inventory = grd_batch.grd_to_ard_batch(
             inventory_df=self.inventory,
@@ -759,60 +752,20 @@ class Sentinel1Batch(Sentinel1):
 
         # time-series part
         if timeseries or timescan:
-            nr_of_processed = len(
-                glob.glob(opj(self.processing_dir, '*',
-                              'Timeseries', '.*processed')))
-
-            nr_of_polar = len(
-                self.inventory.polarisationmode.unique()[0].split(' '))
-            nr_of_tracks = len(self.inventory.relativeorbit.unique())
-            nr_of_ts = nr_of_polar * nr_of_tracks
-
             # check and retry function
-            i = 0
-            while nr_of_ts > nr_of_processed:
-                grd_batch.ards_to_timeseries(self.inventory,
-                                             self.processing_dir,
-                                             self.temp_dir,
-                                             self.proc_file,
-                                             )
-
-                nr_of_processed = len(
-                    glob.glob(opj(self.processing_dir, '*',
-                                  'Timeseries', '.*processed')))
-                i += 1
-
-                # not more than 5 trys
-                if i == 5:
-                    break
+            grd_batch.ards_to_timeseries(self.inventory,
+                                         self.processing_dir,
+                                         self.temp_dir,
+                                         self.config_dict,
+                                         )
 
         if timescan:
-            # number of already processed timescans
-            nr_of_processed = len(glob.glob(opj(
-                self.processing_dir, '*', 'Timescan', '.*processed')))
-
             # number of expected timescans
-            nr_of_polar = len(
-                self.inventory.polarisationmode.unique()[0].split(' '))
-            nr_of_tracks = len(self.inventory.relativeorbit.unique())
-            nr_of_ts = nr_of_polar * nr_of_tracks
-
-            i = 0
-            while nr_of_ts > nr_of_processed:
-
-                grd_batch.timeseries_to_timescan(
-                    self.inventory,
-                    self.processing_dir,
-                    self.proc_file)
-
-                nr_of_processed = len(glob.glob(opj(
-                    self.processing_dir, '*', 'Timescan', '.*processed')))
-
-                i += 1
-
-                # not more than 5 trys
-                if i == 5:
-                    break
+            grd_batch.timeseries_to_timescan(
+                self.inventory,
+                self.processing_dir,
+                self.config_dict
+            )
 
         if cut_to_aoi:
             cut_to_aoi = self.aoi

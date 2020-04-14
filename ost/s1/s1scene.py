@@ -23,7 +23,11 @@ from shapely.wkt import loads
 
 from ost.helpers import scihub, peps, onda, raster as ras
 from ost.s1.grd_to_ard import grd_to_ard, ard_to_rgb, ard_to_thumbnail
+from ost.s1.burst_batch import bursts_to_ards
 from ost.helpers.settings import APIHUB_BASEURL, check_ard_parameters
+from ost.s1 import burst_inventory
+from ost.s1.ard_to_rgb import ard_to_rgb, ard_to_thumbnail, \
+    ard_slc_to_rgb, ard_slc_to_thumbnail
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +96,8 @@ class Sentinel1Scene:
         self.ard_parameters = {}
         self.get_ard_parameters(ard_type)
         check_ard_parameters(self.ard_parameters)
+
+        self.data_mount = '/eodata'
 
     def info(self):
 
@@ -230,7 +236,6 @@ class Sentinel1Scene:
                 path = self._creodias_path(data_mount)
             elif self._onda_path(data_mount).exists():
                 path = self._onda_path(data_mount)
-
         if path is None:
             raise FileNotFoundError(
                 'No product path found for: {}'.format(self.scene_id)
@@ -412,7 +417,6 @@ class Sentinel1Scene:
         geolocation_grid = et_root.find('geolocationGrid')[0]
         first = {}
         last = {}
-
         # Get burst corner geolocation info
         for geo_point in geolocation_grid:
             if geo_point.find('pixel').text == '0':
@@ -478,10 +482,9 @@ class Sentinel1Scene:
             geo_dict = {'SceneID': self.scene_id, 'Track': track,
                         'Date': acq_date, 'SwathID': swath,
                         'AnxTime': azi_anx_time, 'BurstNr': i + 1,
-                        'geometry': loads(wkt)}
-
+                        'geometry': loads(wkt)
+                        }
             gdf = gdf.append(geo_dict, ignore_index=True)
-
         return gdf
 
     def scihub_annotation_get(self, uname=None, pword=None):
@@ -520,9 +523,9 @@ class Sentinel1Scene:
 
                 # parse the xml page from the response
                 gdf = self._burst_database(et_root)
-
                 gdf_final = gdf_final.append(gdf)
-
+        gdf_final.reset_index(drop=False, inplace=True)
+        gdf_final.rename(columns={"index": "bid"}, inplace=True)
         return gdf_final.drop_duplicates(['AnxTime'], keep='first')
 
     def zip_annotation_get(self, download_dir, data_mount='/eodata'):
@@ -533,7 +536,6 @@ class Sentinel1Scene:
         # crs for empty dataframe
         crs = {'init': 'epsg:4326'}
         gdf_final = gpd.GeoDataFrame(columns=column_names, crs=crs)
-
         file = self.get_path(download_dir, data_mount)
 
         # extract info from archive
@@ -544,10 +546,10 @@ class Sentinel1Scene:
         # loop through xml annotation files
         for xml_file in xml_files:
             xml_string = archive.open(xml_file)
-
             gdf = self._burst_database(eTree.parse(xml_string))
             gdf_final = gdf_final.append(gdf)
-
+        gdf_final.reset_index(drop=False, inplace=True)
+        gdf_final.rename(columns={"index": "bid"}, inplace=True)
         return gdf_final.drop_duplicates(['AnxTime'], keep='first')
 
     def safe_annotation_get(self, download_dir, data_mount='/eodata'):
@@ -563,6 +565,8 @@ class Sentinel1Scene:
             # parse the xml page from the response
             gdf = self._burst_database(eTree.parse(anno_file))
             gdf_final = gdf_final.append(gdf)
+        gdf_final.reset_index(drop=False, inplace=True)
+        gdf_final.rename(columns={"index": "bid"}, inplace=True)
 
         return gdf_final.drop_duplicates(['AnxTime'], keep='first')
 
@@ -725,7 +729,8 @@ class Sentinel1Scene:
             out_prefix=None,
             temp_dir=None,
             subset=None,
-            max_workers=int(os.cpu_count()/2),
+            max_workers=os.cpu_count(),
+            executor_type='concurrent_processes',
             overwrite=False
     ):
         if filelist is None:
@@ -798,64 +803,91 @@ class Sentinel1Scene:
                     raise e
             else:
                 processing_poly = None
-            # get file paths
-            master_file = self.get_path(out_dir)
-            if isinstance(master_file, str):
-                master_file = [master_file]
             # get bursts
-            master_bursts = self.zip_annotation_get(download_dir=out_dir)
-            bursts_dict = get_bursts_by_polygon(
-                master_annotation=master_bursts,
+            master_bursts = self.zip_annotation_get(download_dir=download_dir)
+            bursts = burst_inventory.get_bursts_by_polygon(
+                burst_inv=master_bursts,
                 out_poly=processing_poly
             )
-            exception_flag = True
-            exception_counter = 0
-            while exception_flag is True:
-                if exception_counter > 3 or exception_flag is False:
-                    break
-                try:
-                    bursts_to_ards(
-                        burst_gdf=bursts_dict,
-                        config_file=config_dict,
-                        executor_type=executor_type,
-                        max_workers=1
-                    )
-                except Exception as e:
-                    logger.debug(e)
-                    max_workers = int(max_workers/2)
-                    exception_flag = True
-                    exception_counter += 1
-                else:
-                    exception_flag = False
-            self.ard_dimap = out_paths
+            with TemporaryDirectory(dir=temp_dir) as temp:
+                self.config_dict = {}
+                self.config_dict['processing'] = self.ard_parameters
+                self.config_dict['processing_dir'] = Path(out_dir)
+                self.config_dict['download_dir'] = Path(download_dir)
+                self.config_dict['temp_dir'] = Path(temp)
+                self.config_dict['data_mount'] = self.data_mount
+                self.config_dict['gpt_max_workers'] = max_workers
+
+                exception_flag = True
+                exception_counter = 0
+                while exception_flag is True:
+                    if exception_counter > 3 or exception_flag is False:
+                        break
+                    try:
+                        out_files_dict = bursts_to_ards(
+                            burst_gdf=bursts,
+                            config_dict=self.config_dict,
+                            executor_type=executor_type,
+                            max_workers=max_workers
+                        )
+                    except Exception as e:
+                        logger.debug(e)
+                        max_workers = int(max_workers/2)
+                        exception_flag = True
+                        exception_counter += 1
+                    else:
+                        exception_flag = False
+            self.ard_dimap = out_files_dict
         else:
-            raise RuntimeError('ERROR: create_ard needs S1 SLC or GRD')
+            raise TypeError('Create_ard needs S1 SLC or GRD')
         return out_paths
 
-    def create_rgb(self, outfile, driver='GTiff'):
-
+    def create_rgb(self, outfile, process_bounds=None, driver='GTiff'):
         # invert ot db from create_ard workflow for rgb creation
         # (otherwise we do it double)
+        logger.debug('Creating RGB Geotiff for scene: %s', self.scene_id)
         if self.ard_parameters['single_ARD']['to_db']:
             to_db = False
         else:
             to_db = True
-
-        ard_to_rgb(self.ard_dimap, outfile, driver, to_db)
+        if self.product_type == 'GRD':
+            self.processing_poly = None
+            ard_to_rgb(self.ard_dimap, outfile, driver, to_db)
+        elif self.product_type == 'SLC':
+            if process_bounds is None:
+                process_bounds = self.processing_poly.bounds
+            bs_list = self.ard_dimap['bs']
+            ard_slc_to_rgb(bs_list, outfile, process_bounds, driver, to_db)
         self.ard_rgb = outfile
+        logger.debug('RGB Geotiff done for scene: %s', self.scene_id)
+        return outfile
 
     def create_rgb_thumbnail(self, outfile, driver='JPEG', shrink_factor=25):
-
-        # invert ot db from create_ard workflow for rgb creation
+        # invert to db from create_ard workflow for rgb creation
         # (otherwise we do it double)
-        if self.ard_parameters['single_ARD']['to_db']:
+        if self.product_type == 'GRD':
+            if self.ard_parameters['to_db']:
+                to_db = False
+            else:
+                to_db = True
+            self.rgb_thumbnail = outfile
+            ard_to_thumbnail(
+                self.ard_dimap,
+                self.rgb_thumbnail,
+                driver,
+                shrink_factor,
+                to_db
+            )
+        elif self.product_type == 'SLC':
             to_db = False
-        else:
-            to_db = True
-
-        self.rgb_thumbnail = outfile
-        ard_to_thumbnail(self.ard_dimap, self.rgb_thumbnail,
-                         driver, shrink_factor, to_db)
+            self.rgb_thumbnail = outfile
+            ard_slc_to_thumbnail(
+                self.ard_rgb,
+                self.rgb_thumbnail,
+                driver,
+                shrink_factor
+            )
+        return outfile
 
     def visualise_rgb(self, shrink_factor=25):
 

@@ -318,6 +318,12 @@ def burst_to_ard(burst, config_dict):
     out_dir = Path(burst.out_directory)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # get info on master from GeoSeries
+    master_prefix = burst['master_prefix']
+    master_file = burst['file_location']
+    master_burst_nr = burst['BurstNr']
+    swath = burst['SwathID']
+
     # existence of processed files
     pol_file = out_dir.joinpath('.pol.processed').exists()
     bs_file = out_dir.joinpath('.bs.processed').exists()
@@ -341,12 +347,6 @@ def burst_to_ard(burst, config_dict):
         # ---------------------------------------------------------------------
         # 1 Import
         # import master
-        # get info on master from GeoSeries
-        master_prefix = burst['master_prefix']
-        master_file = burst['file_location']
-        master_burst_nr = burst['BurstNr']
-        swath = burst['SwathID']
-
         # create namespace for master import
         master_import = temp_dir.joinpath(f'{master_prefix}_import')
 
@@ -404,3 +404,20 @@ def burst_to_ard(burst, config_dict):
         else:
             # remove master import
             h.delete_dimap(master_import)
+
+    # Get out files after the processing if any
+    if ard['H-A-Alpha']:
+        out_pol = out_dir.joinpath(master_prefix + '_pol.dim')
+    else:
+        out_pol = None
+    if ard['backscatter']:
+        out_bs = out_dir.joinpath(master_prefix + '_bs.dim')
+        out_ls = out_dir.joinpath(master_prefix + '_LS.dim')
+    else:
+        out_bs, out_ls = None, None
+    if coherence:
+        out_coh = out_dir.joinpath(master_prefix + '_coh.dim')
+    else:
+        out_coh = None
+
+    return out_bs, out_ls, out_coh, out_pol

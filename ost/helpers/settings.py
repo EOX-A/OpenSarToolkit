@@ -272,3 +272,12 @@ CONFIG_CHECK = dict({
     'remove_outliers': {'type': bool},
     'cut_to_aoi': {'type': bool}
 })
+
+GTIFF_OST_PROFILE = {
+    "driver": "GTiff",
+    "blockysize": 256,
+    "blockxsize": 256,
+    "tiled": True,
+    "compress": "deflate",
+    "interleave": "band"
+}

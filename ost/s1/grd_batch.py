@@ -6,7 +6,7 @@ import itertools
 import logging
 import gdal
 
-from ost import Sentinel1Scene
+from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers import raster as ras
 from ost.generic import ts_extent
 from ost.generic import ts_ls_mask
@@ -126,14 +126,13 @@ def grd_to_ard_batch(
     return inventory_df
 
 
-def ards_to_timeseries(inventory_df, processing_dir, temp_dir,
-                       proc_file, exec_file):
-
-    # load ard parameters
-    with open(proc_file, 'r') as ard_file:
-        ard_params = json.load(ard_file)['processing parameters']
-        ard = ard_params['single ARD']
-
+def ards_to_timeseries(
+        inventory_df,
+        processing_dir,
+        temp_dir,
+        config_dict,
+):
+    ard = config_dict['processing']['single ARD']
     for track in inventory_df.relativeorbit.unique():
 
         # get the burst directory
@@ -143,15 +142,6 @@ def ards_to_timeseries(inventory_df, processing_dir, temp_dir,
         list_of_scenes = glob.glob(opj(track_dir, '20*', '*data*', '*img'))
         list_of_scenes = [x for x in list_of_scenes if 'layover' not in x]
         extent = opj(track_dir, '{}.extent.shp'.format(track))
-
-        # placeholder for parallelisation
-        if exec_file:
-            if os.path.isfile(exec_file):
-                os.remove(exec_file)
-
-            print('create command')
-            continue
-
         logger.info('Creating common extent mask for track {}'.format(track))
         ts_extent.mt_extent(list_of_scenes, extent, temp_dir, -0.0018)
 
@@ -192,20 +182,19 @@ def ards_to_timeseries(inventory_df, processing_dir, temp_dir,
                 opj(track_dir, '20*', '*bs*dim')))
 
             ard_to_ts.ard_to_ts(
-                            list_of_dims,
-                            processing_dir,
-                            temp_dir,
-                            track,
-                            proc_file,
-                            product='bs',
-                            pol=pol
+                list_of_files=list_of_dims,
+                product='bs',
+                pol=pol,
+                config_dict=config_dict
             )
 
 
-def timeseries_to_timescan(inventory_df, processing_dir, proc_file,
-                           exec_file=None):
-
-
+def timeseries_to_timescan(
+        inventory_df,
+        processing_dir,
+        proc_file,
+        exec_file=None
+):
     # load ard parameters
     with open(proc_file, 'r') as ard_file:
         ard_params = json.load(ard_file)['processing parameters']

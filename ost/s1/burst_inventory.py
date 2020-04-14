@@ -1,5 +1,5 @@
 import os
-import json
+import shapely
 import logging
 from pathlib import Path
 import geopandas as gpd
@@ -7,13 +7,18 @@ import geopandas as gpd
 from shapely.geometry import box
 
 from ost.helpers import scihub, vector as vec
-from ost import Sentinel1Scene as S1Scene
+from ost.s1.s1scene import Sentinel1Scene as S1Scene
 
 logger = logging.getLogger(__name__)
 
 
-def burst_inventory(inventory_df, outfile, download_dir=os.getenv('HOME'),
-                    data_mount=None, uname=None, pword=None):
+def burst_inventory(inventory_df,
+                    outfile,
+                    download_dir=os.getenv('HOME'),
+                    data_mount=None,
+                    uname=None,
+                    pword=None
+                    ):
     """Creates a Burst GeoDataFrame from an OST inventory file
     Args:
     Returns:
@@ -26,10 +31,7 @@ def burst_inventory(inventory_df, outfile, download_dir=os.getenv('HOME'),
     crs = {'init': 'epsg:4326', 'no_defs': True}
     # create empty dataframe
     gdf_full = gpd.GeoDataFrame(columns=column_names, crs=crs)
-    # uname, pword = scihub.askScihubCreds()
-
     for scene_id in inventory_df.identifier:
-
         # read into S1scene class
         scene = S1Scene(scene_id)
 
@@ -45,7 +47,6 @@ def burst_inventory(inventory_df, outfile, download_dir=os.getenv('HOME'),
                         ' (need to download xml files)')
             if not uname and not pword:
                 uname, pword = scihub.ask_credentials()
-
             opener = scihub.connect(uname=uname, pword=pword)
             if scene.scihub_online_status(opener) is False:
                 logger.info('Product needs to be online'
@@ -141,8 +142,7 @@ def refine_burst_inventory(aoi, burst_gdf, outfile, coverages=None):
     return burst_gdf[cols]
 
 
-def prepare_burst_inventory(burst_gdf, config_file):
-
+def prepare_burst_inventory(burst_gdf, config_dict):
     cols = [
         'AnxTime', 'BurstNr', 'Date', 'Direction', 'SceneID', 'SwathID',
         'Track', 'geometry', 'bid', 'master_prefix', 'out_directory',
@@ -157,11 +157,9 @@ def prepare_burst_inventory(burst_gdf, config_file):
     )
 
     # load relevant config parameters
-    with open(config_file, 'r') as file:
-        config_dict = json.load(file)
-        processing_dir = Path(config_dict['processing_dir'])
-        download_dir = Path(config_dict['download_dir'])
-        data_mount = Path(config_dict['data_mount'])
+    processing_dir = Path(config_dict['processing_dir'])
+    download_dir = Path(config_dict['download_dir'])
+    data_mount = Path(config_dict['data_mount'])
 
     # loop through burst_gdf and add slave infos
     for burst in burst_gdf.bid.unique():
@@ -184,7 +182,7 @@ def prepare_burst_inventory(burst_gdf, config_file):
                 download_dir, data_mount
             )
             burst_row['master_prefix'] = f'{date}_{burst_row.bid.values[0]}'
-            burst_row['out_directory'] = processing_dir.joinpath(burst, date)
+            burst_row['out_directory'] = processing_dir.joinpath(str(burst), date)
 
             # try to get slave date
             try:
@@ -226,31 +224,19 @@ def prepare_burst_inventory(burst_gdf, config_file):
     return proc_burst_gdf
 
 
-def get_bursts_by_polygon(master_annotation, out_poly=None):
-    master_bursts = master_annotation
-
-    bursts_dict = {'IW1': [], 'IW2': [], 'IW3': []}
-    for subswath, nr, id, b in zip(
-            master_bursts['SwathID'],
-            master_bursts['BurstNr'],
-            master_bursts['AnxTime'],
-            master_bursts['geometry']
-    ):
-        # Return all burst combinations if out poly is None
-        if out_poly is None:
-            if (nr, id) not in bursts_dict[subswath]:
-                b_bounds = b.bounds
-                burst_buffer = abs(b_bounds[2]-b_bounds[0])/75
-                burst_bbox = box(
-                    b_bounds[0], b_bounds[1], b_bounds[2], b_bounds[3]
-                ).buffer(burst_buffer).envelope
-                bursts_dict[subswath].append((nr, id, burst_bbox))
-        elif b.intersects(out_poly):
-            if (nr, id) not in bursts_dict[subswath]:
-                b_bounds = b.bounds
+def get_bursts_by_polygon(burst_inv, out_poly=None):
+    out_burst_inv = burst_inv
+    if out_poly is not None:
+        for i, row in out_burst_inv.iterrows():
+            # Return all burst combinations if out poly is None
+            b = shapely.wkt.loads(str(row.geometry))
+            if b.intersects(out_poly):
+                b_bounds = row.geometry.bounds
                 burst_buffer = abs(out_poly.bounds[2]-out_poly.bounds[0])/75
                 burst_bbox = box(
                     b_bounds[0], b_bounds[1], b_bounds[2], b_bounds[3]
                 ).buffer(burst_buffer).envelope
-                bursts_dict[subswath].append((nr, id, burst_bbox))
-    return bursts_dict
+                out_burst_inv.at[i, 'geometry'] = burst_bbox
+            else:
+                out_burst_inv.drop(i, inplace=True)
+    return out_burst_inv
