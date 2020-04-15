@@ -55,7 +55,6 @@ def ls_to_vector(infile, out_path=None, driver="GPKG", buffer=2):
                                           mask=ls_arr.mask,
                                           transform=src.transform
                                           )
-
     geom = [shape(i) for i, v in shapes]
     features_gdf = gpd.GeoDataFrame({'geometry': geom})
     if features_gdf.empty:

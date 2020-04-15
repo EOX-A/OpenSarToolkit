@@ -100,7 +100,7 @@ def grd_to_ard_batch(
                     temp_dir,
                     ard_params=config_dict['processing'],
                     subset=subset,
-                    ncores=config_dict['gpt_max_workers']
+                    gpt_max_workers=config_dict['gpt_max_workers']
                     )
                 if to_tif:
                     tif_file = ard_to_rgb(infile=out_file,

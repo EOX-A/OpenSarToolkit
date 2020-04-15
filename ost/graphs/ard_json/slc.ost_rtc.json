@@ -34,7 +34,6 @@
                 "pan_size": 50
             },
             "create_ls_mask": true,
-            "apply_ls_mask": false,
             "dem": {
                 "dem_name": "SRTM 1Sec HGT",
                 "dem_file": "",

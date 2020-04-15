@@ -13,6 +13,8 @@ Changelog
 * added a DownloadError as general custom DL error
 * added SLC processing to the Sentinel1Scene class
     * also added a test for it
+    * burst batch processing now returns dict with processed out_files
+* GRD s1 scene now returns also "bs" and "ls" paths in dictionary
 * also conversion of GRD and SLC to RGB GeoTiffs (core functions now in ost.s1.ard_to_rgb.py)
 * defined a default OST Geotiff profile for rasterio in settings/py
 * Project class now gets HERBERT for search and download as default

@@ -21,6 +21,7 @@ import geopandas as gpd
 import requests
 from shapely.wkt import loads
 
+from ost.helpers import helpers as h
 from ost.helpers import scihub, peps, onda, raster as ras
 from ost.s1.grd_to_ard import grd_to_ard, ard_to_rgb, ard_to_thumbnail
 from ost.s1.burst_batch import bursts_to_ards
@@ -735,7 +736,18 @@ class Sentinel1Scene:
     ):
         if filelist is None:
             filelist = [self.get_path(download_dir=download_dir)]
-        out_paths = []
+
+        if overwrite is True:
+            logger.info('Overwrite flag here is a placeholder')
+
+        self.ard_dimap = None
+        if self.product_type == 'SLC':
+            out_files_dict = {'bs': [], 'ls': [], 'coh': [], 'pol': []}
+        elif self.product_type == 'GRD':
+            out_files_dict = {'bs': '', 'ls': ''}
+        else:
+            raise TypeError('Only GRD or SLC S1 product types are supported!!')
+
         if subset is not None:
             p_poly = loads(subset)
             self.processing_poly = p_poly
@@ -765,28 +777,22 @@ class Sentinel1Scene:
             with TemporaryDirectory(dir=temp_dir) as temp:
                 if isinstance(filelist, str):
                     filelist = [filelist]
+                # run the processing
+                return_code, out_bs, out_ls = grd_to_ard(
+                    filelist=filelist,
+                    output_dir=out_dir,
+                    file_id=out_prefix,
+                    temp_dir=temp,
+                    ard_params=self.ard_parameters,
+                    subset=subset,
+                    gpt_max_workers=os.cpu_count()
+                    )
+                out_files_dict['bs'] = out_bs
+                out_files_dict['ls'] = out_ls
                 # write to class attribute
-                self.ard_dimap = glob.glob(
-                    opj(out_dir, '{}*BS.dim'.format(out_prefix))
-                )
-                if overwrite or len(self.ard_dimap) == 0:
-                    # run the processing
-                    grd_to_ard(
-                        filelist=filelist,
-                        output_dir=out_dir,
-                        file_id=out_prefix,
-                        temp_dir=temp,
-                        ard_params=self.ard_parameters,
-                        subset=subset,
-                        ncores=os.cpu_count()
-                        )
-                # write to class attribute
-                self.ard_dimap = glob.glob(
-                    opj(out_dir, '{}*BS.dim'.format(out_prefix))
-                )[0]
-                if not os.path.isfile(self.ard_dimap):
+                self.ard_dimap = out_files_dict
+                if not os.path.isfile(str(self.ard_dimap['bs'])):
                     raise RuntimeError
-                out_paths.append(self.ard_dimap)
 
         elif self.product_type == 'SLC':
             """
@@ -833,14 +839,13 @@ class Sentinel1Scene:
                     except Exception as e:
                         logger.debug(e)
                         max_workers = int(max_workers/2)
-                        exception_flag = True
                         exception_counter += 1
                     else:
                         exception_flag = False
             self.ard_dimap = out_files_dict
         else:
-            raise TypeError('Create_ard needs S1 SLC or GRD')
-        return out_paths
+            raise TypeError('Create_ard needs S1 SLC or GRD!!!')
+        return self.ard_dimap
 
     def create_rgb(self, outfile, process_bounds=None, driver='GTiff'):
         # invert ot db from create_ard workflow for rgb creation
@@ -852,7 +857,8 @@ class Sentinel1Scene:
             to_db = True
         if self.product_type == 'GRD':
             self.processing_poly = None
-            ard_to_rgb(self.ard_dimap, outfile, driver, to_db)
+            print(self.ard_dimap['bs'])
+            ard_to_rgb(self.ard_dimap['bs'], outfile, driver, to_db)
         elif self.product_type == 'SLC':
             if process_bounds is None:
                 process_bounds = self.processing_poly.bounds

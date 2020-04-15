@@ -25,7 +25,7 @@ def grd_to_ard(filelist,
                temp_dir, 
                ard_params,
                subset=None,
-               ncores=os.cpu_count()
+               gpt_max_workers=os.cpu_count()
                ):
     '''The main function for the grd to ard generation
 
@@ -164,7 +164,7 @@ def grd_to_ard(filelist,
         calibrated,
         logfile,
         calibrate_to,
-        ncores=ncores
+        gpt_max_workers=gpt_max_workers
     )
     
     # delete input
@@ -192,7 +192,7 @@ def grd_to_ard(filelist,
             logfile,
             ml_factor,
             ml_factor,
-            ncores
+            gpt_max_workers
         )
 
         # delete input
@@ -218,7 +218,7 @@ def grd_to_ard(filelist,
             ls_mask,
             logfile,
             ard,
-            ncores
+            gpt_max_workers
         )
         # delete output if command failed for some reason and return
         if return_code != 0:
@@ -257,7 +257,7 @@ def grd_to_ard(filelist,
             filtered,
             logfile,
             ard['speckle filter'],
-            ncores
+            gpt_max_workers
         )
 
         # delete input
@@ -281,7 +281,7 @@ def grd_to_ard(filelist,
             flattened,
             logfile,
             ard['dem'],
-            ncores
+            gpt_max_workers
         )
 
         # delete input file
@@ -323,7 +323,7 @@ def grd_to_ard(filelist,
         logfile=logfile,
         resolution=ard['resolution'],
         dem_dict=ard['dem'],
-        ncores=ncores
+        gpt_max_workers=gpt_max_workers
     )
     
     # delete input file
@@ -359,8 +359,10 @@ def grd_to_ard(filelist,
 
     # Return colected files that have been processed
     if ard['create_ls_mask'] is True:
-        out_ls_mask = out_ls_mask + '.dim'
+        out_final_ls_mask = out_ls_mask + '.dim'
         out_ls_mask = ls_to_vector(infile=out_ls_mask, driver='GPKG')
+        if out_ls_mask is None:
+            h.delete_dimap(out_final_ls_mask.replace('.dim', ''))
     else:
         out_ls_mask = None
 

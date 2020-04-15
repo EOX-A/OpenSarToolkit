@@ -80,8 +80,12 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
             file.write('passed all tests \n')
 
 
-def create_backscatter_layers(import_file, out_dir, burst_prefix,
-                              config_dict):
+def create_backscatter_layers(
+        import_file,
+        out_dir,
+        burst_prefix,
+        config_dict
+):
     """
 
     :param import_file:
@@ -99,6 +103,8 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
 
         temp = Path(temp)
+        out_bs = out_dir.joinpath(f'{burst_prefix}_bs')
+
         # ---------------------------------------------------------------------
         # 1 Calibration
 
@@ -173,10 +179,11 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
         try:
             h.check_out_dimap(out_tc)
         except ValueError:
+            out_bs = None
             pass
 
         # move final backscatter product to actual output directory
-        h.move_dimap(out_tc, out_dir.joinpath(f'{burst_prefix}_bs'))
+        h.move_dimap(out_tc, out_bs)
 
         # ---------------------------------------------------------------------
         # 9 Layover/Shadow mask
@@ -198,20 +205,21 @@ def create_backscatter_layers(import_file, out_dir, burst_prefix,
                 pass
 
             # move ls data to final destination
-            h.move_dimap(out_ls, out_dir.joinpath(f'{burst_prefix}_LS'))
+            out_final_ls = out_dir.joinpath(f'{burst_prefix}_LS')
+            h.move_dimap(out_ls, out_final_ls)
 
         # write out check file for tracking that it is processed
         with open(out_dir.joinpath('.bs.processed'), 'w+') as file:
             file.write('passed all tests \n')
 
     # Return colected files that have been processed
-    if ard['create_ls_mask'] is True:
-        out_ls_mask = out_ls + '.dim'
+    if ard['create_ls_mask']:
+        out_ls_mask = str(out_final_ls) + '.dim'
         out_ls_mask = ls_to_vector(infile=out_ls_mask, driver='GPKG')
     else:
         out_ls_mask = None
 
-    return out_tc + '.dim', out_ls_mask
+    return out_bs + '.dim', out_ls_mask
 
 
 def create_coherence_layers(
@@ -374,7 +382,7 @@ def burst_to_ard(burst, config_dict):
             )
 
         if ard['backscatter'] and not bs_file:
-            create_backscatter_layers(
+            out_bs, out_ls = create_backscatter_layers(
                 f'{master_import}.dim', out_dir, master_prefix, config_dict
             )
 
@@ -412,7 +420,7 @@ def burst_to_ard(burst, config_dict):
         out_pol = None
     if ard['backscatter']:
         out_bs = out_dir.joinpath(master_prefix + '_bs.dim')
-        out_ls = out_dir.joinpath(master_prefix + '_LS.dim')
+        out_ls = out_dir.joinpath(master_prefix + '_LS.gpkg')
     else:
         out_bs, out_ls = None, None
     if coherence:

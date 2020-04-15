@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
-def calibration(infile, outfile, logfile, calibrate_to, ncores=os.cpu_count()):
+def calibration(infile, outfile, logfile, calibrate_to, gpt_max_workers=os.cpu_count()):
     # transform calibration parameter to snap readable
     sigma0, beta0, gamma0 = 'false', 'false', 'false'
 
@@ -31,7 +31,7 @@ def calibration(infile, outfile, logfile, calibrate_to, ncores=os.cpu_count()):
                ' -PoutputGammaBand=\'{}\''
                ' -PoutputSigmaBand=\'{}\''
                ' -t \'{}\' \'{}\''.format(
-        GPT_FILE, 2 * ncores,
+        GPT_FILE, 2 * gpt_max_workers,
         beta0, gamma0, sigma0,
         outfile, infile
     )
@@ -51,7 +51,7 @@ def calibration(infile, outfile, logfile, calibrate_to, ncores=os.cpu_count()):
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
-def multi_look(infile, outfile, logfile, rg_looks, az_looks, ncores=os.cpu_count()):
+def multi_look(infile, outfile, logfile, rg_looks, az_looks, gpt_max_workers=os.cpu_count()):
     logger.info('Multi-looking the image with {} looks in'
                 ' azimuth and {} looks in range.'.format(az_looks, rg_looks)
                 )
@@ -60,7 +60,7 @@ def multi_look(infile, outfile, logfile, rg_looks, az_looks, ncores=os.cpu_count
                ' -PnAzLooks={}'
                ' -PnRgLooks={}'
                ' -t \'{}\' {}'.format(
-        GPT_FILE, 2 * ncores,
+        GPT_FILE, 2 * gpt_max_workers,
         az_looks, rg_looks,
         outfile, infile
     )
@@ -81,7 +81,7 @@ def multi_look(infile, outfile, logfile, rg_looks, az_looks, ncores=os.cpu_count
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
 def speckle_filter(infile, outfile, logfile, speckle_dict,
-                   ncores=os.cpu_count()):
+                   gpt_max_workers=os.cpu_count()):
     """ Wrapper around SNAP's peckle Filter function
 
     This function takes OST imported Sentinel-1 product and applies
@@ -95,7 +95,7 @@ def speckle_filter(infile, outfile, logfile, speckle_dict,
                  file written in BEAM-Dimap format
         logfile: string or os.path object for the file
                  where SNAP'S STDOUT/STDERR is written to
-        ncores (int): number of cpus used - useful for parallel processing
+        gpt_max_workers (int): number of cpus used - useful for parallel processing
     """
 
     logger.info('Applying speckle filtering.')
@@ -114,7 +114,7 @@ def speckle_filter(infile, outfile, logfile, speckle_dict,
         ' -PtargetWindowSizeStr=\"{}\"'
         ' -PwindowSize=\"{}\"'
         ' -t \'{}\' \'{}\''.format(
-              GPT_FILE, 2*ncores,
+              GPT_FILE, 2*gpt_max_workers,
               speckle_dict['estimate_ENL'],
               speckle_dict['pan_size'],
               speckle_dict['damping'],
@@ -144,7 +144,7 @@ def speckle_filter(infile, outfile, logfile, speckle_dict,
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
-def linear_to_db(infile, outfile, logfile, ncores=os.cpu_count()):
+def linear_to_db(infile, outfile, logfile, gpt_max_workers=os.cpu_count()):
     """A wrapper around SNAP's linear to db routine
 
     This function takes an OST calibrated Sentinel-1 product
@@ -157,13 +157,13 @@ def linear_to_db(infile, outfile, logfile, ncores=os.cpu_count()):
                  file written in BEAM-Dimap format
         logfile: string or os.path object for the file
                  where SNAP'S STDOUT/STDERR is written to
-        ncores (int): number of cpus used - useful for parallel processing
+        gpt_max_workers (int): number of cpus used - useful for parallel processing
     """
 
     logger.info('Converting the image to dB-scale.')
     # construct command string
     command = (
-        f'{GPT_FILE} LinearToFromdB -x -q {2*ncores} -t \'{outfile}\' {infile}'
+        f'{GPT_FILE} LinearToFromdB -x -q {2*gpt_max_workers} -t \'{outfile}\' {infile}'
     )
 
     # run command and get return code
@@ -185,7 +185,7 @@ def terrain_flattening(
             outfile,
             logfile,
             dem_dict,
-            ncores=os.cpu_count()
+            gpt_max_workers=os.cpu_count()
 ):
     command = (
         '{} Terrain-Flattening -x -q {}'
@@ -195,7 +195,7 @@ def terrain_flattening(
         ' -PexternalDEMNoDataValue={}'
         ' -t \'{}\' \'{}\''.format(
             GPT_FILE,
-            2 * ncores,
+            2 * gpt_max_workers,
             dem_dict['dem_name'],
             dem_dict['dem_resampling'],
             dem_dict['dem_file'],
@@ -224,7 +224,7 @@ def terrain_correction(infile,
                        logfile,
                        resolution,
                        dem_dict,
-                       ncores=os.cpu_count()
+                       gpt_max_workers=os.cpu_count()
                        ):
     """
     A wrapper around SNAP's Terrain Correction routine
@@ -245,7 +245,7 @@ def terrain_correction(infile,
                        'SRTM 3sec'
                        'ASTER 1sec GDEM'
                        'ACE30'
-        ncores (int): number of cpus used - useful for parallel processing
+        gpt_max_workers (int): number of cpus used - useful for parallel processing
 
     """
 
@@ -260,7 +260,7 @@ def terrain_correction(infile,
         ' -PpixelSpacingInMeter={}'
         ' -t \'{}\' \'{}\''.format(
             GPT_FILE,
-            2 * ncores,
+            2 * gpt_max_workers,
             dem_dict['dem_name'],
             dem_dict['dem_resampling'],
             dem_dict['dem_file'],
@@ -287,14 +287,14 @@ def terrain_correction(infile,
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
-def ls_mask(infile, outfile, logfile, ard, ncores=os.cpu_count()):
+def ls_mask(infile, outfile, logfile, ard, gpt_max_workers=os.cpu_count()):
     """
 
     :param infile:
     :param outfile:
     :param logfile:
     :param ard:
-    :param ncores:
+    :param gpt_max_workers:
     :return:
     """
     logger.info('Creating the Layover/Shadow mask')
@@ -303,7 +303,7 @@ def ls_mask(infile, outfile, logfile, ard, ncores=os.cpu_count()):
     dem_dict = ard['dem']
 
     command = (
-        f'{GPT_FILE} {graph} -x -q {2 * ncores} '
+        f'{GPT_FILE} {graph} -x -q {2 * gpt_max_workers} '
         f'-Pinput=\'{infile}\' '
         f'-Presol={ard["resolution"]} '
         f'-Pdem=\'{dem_dict["dem_name"]}\' '
@@ -331,7 +331,7 @@ def ls_mask(infile, outfile, logfile, ard, ncores=os.cpu_count()):
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
 def create_stack(filelist, out_stack, logfile,
-                 polarisation=None, pattern=None, ncores=os.cpu_count()):
+                 polarisation=None, pattern=None, gpt_max_workers=os.cpu_count()):
     '''
 
     :param filelist: list of single Files (space separated)
@@ -342,12 +342,12 @@ def create_stack(filelist, out_stack, logfile,
     if pattern:
         graph = opj(OST_ROOT, 'graphs', 'S1_TS', '1_BS_Stacking_HAalpha.xml')
         command = '{} {} -x -q {} -Pfilelist={} -PbandPattern=\'{}.*\' \
-               -Poutput={}'.format(GPT_FILE, graph, 2*ncores,
+               -Poutput={}'.format(GPT_FILE, graph, 2*gpt_max_workers,
                                    filelist, pattern, out_stack)
     else:
         graph = opj(OST_ROOT, 'graphs', 'S1_TS', '1_BS_Stacking.xml')
         command = '{} {} -x -q {} -Pfilelist={} -Ppol={} \
-               -Poutput={}'.format(GPT_FILE, graph, 2*ncores,
+               -Poutput={}'.format(GPT_FILE, graph, 2*gpt_max_workers,
                                    filelist, polarisation, out_stack)
 
     return_code = h.run_command(command, logfile)
@@ -365,7 +365,7 @@ def create_stack(filelist, out_stack, logfile,
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
 def mt_speckle_filter(in_stack, out_stack, logfile, speckle_dict,
-                      ncores=os.cpu_count()):
+                      gpt_max_workers=os.cpu_count()):
     #logger.info('Applying multi-temporal speckle filtering.')
     # construct command string
     command = ('{} Multi-Temporal-Speckle-Filter -x -q {}'
@@ -381,7 +381,7 @@ def mt_speckle_filter(in_stack, out_stack, logfile, speckle_dict,
                ' -PtargetWindowSizeStr={}'
                ' -PwindowSize={}'
                ' -t \'{}\' \'{}\''.format(
-        GPT_FILE, 2 * ncores,
+        GPT_FILE, 2 * gpt_max_workers,
         speckle_dict['estimate_ENL'],
         speckle_dict['pan_size'],
         speckle_dict['damping'],

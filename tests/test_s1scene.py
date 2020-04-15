@@ -30,15 +30,18 @@ def test_s1scene_slc_processing(s1_slc_ost_master,
     aoi = box(some_bounds_slc[0], some_bounds_slc[1],
               some_bounds_slc[2], some_bounds_slc[3]
               ).wkt
-    s1scene.create_ard(
+    out_files_dict = s1scene.create_ard(
         download_dir=slc_project_class.download_dir,
         out_dir=slc_project_class.project_dir,
         overwrite=True,
         subset=aoi
         )
-    s1scene.create_rgb(
+    out_tif = s1scene.create_rgb(
         outfile=os.path.join(str(slc_project_class.project_dir), s1scene.scene_id+'.tif')
     )
+    assert os.path.exists(out_files_dict['bs'][0][1])
+    assert os.path.exists(out_files_dict['ls'][0])
+    assert os.path.exists(out_tif)
 
 
 def test_s1scene_grd_processing(s1_grd_notnr_ost_product,
@@ -49,9 +52,13 @@ def test_s1scene_grd_processing(s1_grd_notnr_ost_product,
     aoi = box(some_bounds_grd[0], some_bounds_grd[1],
               some_bounds_grd[2], some_bounds_grd[3]
               ).wkt
-    s1scene.create_ard(download_dir=grd_project_class.download_dir,
-                       out_dir=grd_project_class.project_dir,
-                       overwrite=True,
-                       subset=aoi
-                       )
-    s1scene.create_rgb(outfile=s1scene.ard_dimap.replace('.dim', '.tif'))
+    out_dict = s1scene.create_ard(
+        download_dir=grd_project_class.download_dir,
+        out_dir=grd_project_class.project_dir,
+        overwrite=True,
+        subset=aoi
+        )
+    out_tif = s1scene.create_rgb(outfile=out_dict['bs'].replace('.dim', '.tif'))
+    assert os.path.exists(out_dict['bs'])
+    assert out_dict['ls'] is None
+    assert os.path.exists(out_tif)

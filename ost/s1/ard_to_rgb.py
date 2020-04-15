@@ -143,7 +143,12 @@ def ard_to_rgb(
         driver='GTiff',
         to_db=True
 ):
+    if not isinstance(infile, str):
+        infile = str(infile)
     prefix = glob.glob(os.path.abspath(infile[:-4]) + '*data')[0]
+
+    co_pol = None
+    cross_pol = None
 
     if len(glob.glob(opj(prefix, '*VV*.img'))) == 1:
         co_pol = glob.glob(opj(prefix, '*VV*.img'))[0]
@@ -153,6 +158,9 @@ def ard_to_rgb(
         co_pol = glob.glob(opj(prefix, '*HH*.img'))[0]
     if len(glob.glob(opj(prefix, '*HV*.img'))) == 1:
         cross_pol = glob.glob(opj(prefix, '*HV*.img'))[0]
+
+    if cross_pol is None:
+        raise ValueError('Need two polarizations to create RGB tif!!')
 
     # !!!!assure and both pols exist!!!
     with rasterio.open(co_pol) as co,  rasterio.open(cross_pol) as cr:
