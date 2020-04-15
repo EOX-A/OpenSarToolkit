@@ -62,7 +62,7 @@ def test_grd_calibration(s1_grd_notnr_ost_product,
             ),
             logfile=logger,
             calibrate_to=calib,
-            ncores=os.cpu_count()
+            gpt_max_workers=os.cpu_count()
         )
         assert return_code == 0
 
@@ -83,7 +83,7 @@ def test_grd_speckle_filter(s1_grd_notnr_ost_product,
         logfile=logger,
         speckle_dict=grd_project_class.ard_parameters
         ['single_ARD']['speckle_filter'],
-        ncores=os.cpu_count()
+        gpt_max_workers=os.cpu_count()
     )
     assert return_code == 0
 
@@ -106,6 +106,6 @@ def test_grd_tc(s1_grd_notnr_ost_product,
         ['single_ARD']['resolution'],
         dem_dict=grd_project_class.ard_parameters
         ['single_ARD']['dem'],
-        ncores=os.cpu_count()
+        gpt_max_workers=os.cpu_count()
     )
     assert return_code == 0

@@ -157,5 +157,4 @@ def grd_project_class(some_bounds_grd, s1_grd_notnr, s1_grd_notnr_ost_product):
         s1_batch.refine_inventory()
         yield s1_batch
     finally:
-        # print('ss')
         shutil.rmtree(TEMP_GRD_DIR)
