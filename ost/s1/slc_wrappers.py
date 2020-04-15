@@ -1,9 +1,8 @@
 import os
 from os.path import join as opj
 import logging
-from pathlib import Path
 
-from retrying import retry
+from retry import retry
 
 from ost.helpers.settings import GPT_FILE, OST_ROOT
 from ost.helpers.errors import GPTRuntimeError
@@ -12,9 +11,9 @@ from ost.helpers import helpers as h
 logger = logging.getLogger(__name__)
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def burst_import(infile, outfile, logfile, swath, burst, polar='VV,VH,HH,HV',
-                 ncores=os.cpu_count()):
+                 gpt_max_workers=os.cpu_count()):
     """A wrapper of SNAP import of a single Sentinel-1 SLC burst
 
     This function takes an original Sentinel-1 scene (either zip or
@@ -34,7 +33,7 @@ def burst_import(infile, outfile, logfile, swath, burst, polar='VV,VH,HH,HV',
         polar (str): a string consisiting of the polarisation (comma separated)
                      e.g. 'VV,VH',
                      default: 'VV,VH,HH,HV'
-        ncores(int): the number of cpu cores to allocate to the gpt job,
+        gpt_max_workers(int): the number of cpu cores to allocate to the gpt job,
                 default: os.cpu_count()
     """
 
@@ -48,7 +47,7 @@ def burst_import(infile, outfile, logfile, swath, burst, polar='VV,VH,HH,HV',
 
     command = '{} {} -x -q {} -Pinput={} -Ppolar={} -Pswath={}\
                       -Pburst={} -Poutput={}' \
-        .format(GPT_FILE, graph, 2*ncores, infile, polar, swath,
+        .format(GPT_FILE, graph, 2*gpt_max_workers, infile, polar, swath,
                 burst, outfile)
 
     return_code = h.run_command(command, logfile)
@@ -63,13 +62,13 @@ def burst_import(infile, outfile, logfile, swath, burst, polar='VV,VH,HH,HV',
         )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def ha_alpha(infile,
              outfile,
              logfile,
              pol_speckle_filter=False,
              pol_speckle_dict=None,
-             ncores=os.cpu_count()
+             gpt_max_workers=os.cpu_count()
              ):
     """A wrapper of SNAP H-A-alpha polarimetric decomposition
 
@@ -86,7 +85,7 @@ def ha_alpha(infile,
                  where SNAP'S STDOUT/STDERR is written to
         pol_speckle_filter (bool): wether or not to apply the
                                    polarimetric speckle filter
-        ncores(int): the number of cpu cores to allocate to the gpt job - defaults to cpu count
+        gpt_max_workers(int): the number of cpu cores to allocate to the gpt job - defaults to cpu count
 
 
     """
@@ -98,7 +97,7 @@ def ha_alpha(infile,
         logger.info('Applying the polarimetric speckle filter and'
                     ' calculating the H-alpha dual-pol decomposition')
         command = (
-            f'{GPT_FILE} {graph} -x -q {2*ncores} '
+            f'{GPT_FILE} {graph} -x -q {2*gpt_max_workers} '
             f'-Pinput={infile} -Poutput={outfile} '
             f'-Pfilter=\'{pol_speckle_dict["polarimetric_filter"]}\' '
             f'-Pfilter_size=\'{pol_speckle_dict["filter_size"]}\' '
@@ -115,7 +114,7 @@ def ha_alpha(infile,
 
         logger.info('Calculating the H-alpha dual polarisation')
         command = (
-            f'{GPT_FILE} {graph} -x -q {2*ncores} ' 
+            f'{GPT_FILE} {graph} -x -q {2*gpt_max_workers} ' 
             f'-Pinput={infile} -Poutput={outfile}'
         )
 
@@ -128,9 +127,16 @@ def ha_alpha(infile,
                 See {} for Snap Error output'.format(return_code, logfile)
                               )
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
-def calibration(infile, outfile, logfile, ard,
-                region='', ncores=os.cpu_count()):
+
+@retry(tries=3, delay=1, logger=logger)
+def calibration(
+        infile,
+        outfile,
+        logfile,
+        ard,
+        region='',
+        gpt_max_workers=os.cpu_count()
+):
     '''A wrapper around SNAP's radiometric calibration
     This function takes OST imported Sentinel-1 product and generates
     it to calibrated backscatter.
@@ -172,7 +178,7 @@ def calibration(infile, outfile, logfile, ard,
                   '-Pdem=\'{}\' -Pdem_file="{}" -Pdem_nodata={} ' \
                   '-Pdem_resampling={} -Pregion="{}" ' \
                   '-Pinput="{}" -Poutput="{}"'.format(
-            GPT_FILE, graph, 2*ncores,
+            GPT_FILE, graph, 2*gpt_max_workers,
             range_looks, azimuth_looks,
             dem_dict['dem_name'], dem_dict['dem_file'],
             dem_dict['dem_nodata'], dem_dict['dem_resampling'],
@@ -190,7 +196,7 @@ def calibration(infile, outfile, logfile, ard,
         command = '{} {} -x -q {} ' \
                   '-Prange_looks={} -Pazimuth_looks={} ' \
                   '-Pregion="{}" -Pinput="{}" -Poutput="{}"' \
-            .format(GPT_FILE, graph, 2*ncores,
+            .format(GPT_FILE, graph, 2*gpt_max_workers,
                     range_looks, azimuth_looks,
                     region, infile, outfile)
 
@@ -207,7 +213,7 @@ def calibration(infile, outfile, logfile, ard,
         command = '{} {} -x -q {} ' \
                   '-Prange_looks={} -Pazimuth_looks={} ' \
                   '-Pregion="{}" -Pinput="{}" -Poutput="{}"' \
-            .format(GPT_FILE, graph, 2*ncores,
+            .format(GPT_FILE, graph, 2*gpt_max_workers,
                     range_looks, azimuth_looks,
                     region, infile, outfile)
     else:
@@ -220,87 +226,14 @@ def calibration(infile, outfile, logfile, ard,
         logger.info('Succesfully calibrated product')
         return return_code
     else:
-        raise GPTRuntimeError('ERROR: Calibration exited with an error {}. \
-                        See {} for Snap Error output'.format(return_code,
-                                                             logfile)
+        raise GPTRuntimeError(
+            'Calibration exited with an error {}. '
+            'See {} for Snap Error output'.format(return_code, logfile)
         )
 
 
-
-# @retry(stop_max_attempt_number=3, wait_fixed=1)
-# def _calibration(infile, outfile, logfile, product_type='GTC-gamma0',
-#                  ncores=os.cpu_count()):
-#     '''A wrapper around SNAP's radiometric calibration
-#
-#     This function takes OST imported Sentinel-1 product and generates
-#     it to calibrated backscatter.
-#
-#     3 different calibration modes are supported.
-#         - Radiometrically terrain corrected Gamma nought (RTC)
-#           NOTE: that the routine actually calibrates to bet0 and needs to
-#           be used together with _terrain_flattening routine
-#         - ellipsoid based Gamma nought (GTCgamma)
-#         - Sigma nought (GTCsigma).
-#
-#     Args:
-#         infile: string or os.path object for
-#                 an OST imported frame in BEAM-Dimap format (i.e. *.dim)
-#         outfile: string or os.path object for the output
-#                  file written in BEAM-Dimap format
-#         logfile: string or os.path object for the file
-#                  where SNAP'S STDOUT/STDERR is written to
-#         resolution (int): the resolution of the output product in meters
-#         product_type (str): the product type of the output product
-#                             i.e. RTC, GTCgamma or GTCsigma
-#         ncores(int): the number of cpu cores to allocate to the gpt job,
-#                 default: os.cpu_count()
-#
-#
-#     '''
-#
-#     # get gpt file
-#     GPT_FILE = h.gpt_path()
-#
-#     # get path to graph
-#     OST_ROOT = importlib.util.find_spec('ost').submodule_search_locations[0]
-#
-#     if product_type == 'RTC-gamma0':
-#         logger.info('Calibrating the product to beta0.')
-#         graph = opj(OST_ROOT, 'graphs', 'S1_SLC2ARD',
-#                     'S1_SLC_TNR_Calbeta_Deb.xml')
-#     elif product_type == 'GTC-gamma0':
-#         logger.info('Calibrating the product to gamma0.')
-#         graph = opj(OST_ROOT, 'graphs', 'S1_SLC2ARD',
-#                     'S1_SLC_TNR_CalGamma_Deb.xml')
-#     elif product_type == 'GTC-sigma0':
-#         logger.info('Calibrating the product to sigma0.')
-#         graph = opj(OST_ROOT, 'graphs', 'S1_SLC2ARD',
-#                     'S1_SLC_TNR_CalSigma_Deb.xml')
-#     elif product_type == 'Coherence_only':
-#         logger.info.infoNo need to calibrate just for coherence')
-#         return_code = 0
-#         return return_code
-#     else:
-#         print(' ERROR: Wrong product type selected.')
-#         sys.exit(121)
-#
-#     logger.info('Removing thermal noise, calibrating and debursting")
-#     command = '{} {} -x -q {} -Pinput={} -Poutput={}' \
-#         .format(GPT_FILE, graph, ncores, infile, outfile)
-#
-#     return_code = h.run_command(command, logfile)
-#
-#     if return_code == 0:
-#         logger.info('Succesfully calibrated product')
-#         return return_code
-#     else:
-#         raise GPTRuntimeError('ERROR: Frame import exited with an error {}. \
-#                 See {} for Snap Error output'.format(return_code, logfile)
-#                               )
-
-
-@retry(stop_max_attempt_number=3, wait_fixed=1)
-def coreg(master, slave, outfile, logfile, dem_dict, ncores=os.cpu_count()):
+@retry(tries=3, delay=1, logger=logger)
+def coreg(master, slave, outfile, logfile, dem_dict, gpt_max_workers=os.cpu_count()):
     '''A wrapper around SNAP's back-geocoding co-registration routine
 
     This function takes a list of 2 OST imported Sentinel-1 SLC products
@@ -320,14 +253,14 @@ def coreg(master, slave, outfile, logfile, dem_dict, ncores=os.cpu_count()):
                        'SRTM 3sec'
                        'ASTER 1sec GDEM'
                        'ACE30'
-        ncores(int): the number of cpu cores to allocate to the gpt job - defaults to cpu count
+        gpt_max_workers(int): the number of cpu cores to allocate to the gpt job - defaults to cpu count
 
 
     '''
 
     logger.info('Co-registering {} and {}'.format(master, slave))
     command = (
-        f'{GPT_FILE} Back-Geocoding -x -q {2*ncores} '
+        f'{GPT_FILE} Back-Geocoding -x -q {2*gpt_max_workers} '
         f'-PdemName=\'{dem_dict["dem_name"]}\' '
         f'-PdemResamplingMethod=\'{dem_dict["dem_resampling"]}\' '
         f'-PexternalDEMFile=\'{dem_dict["dem_file"]}\' '
@@ -348,8 +281,8 @@ def coreg(master, slave, outfile, logfile, dem_dict, ncores=os.cpu_count()):
                               )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
-def coreg2(master, slave, outfile, logfile, dem_dict, ncores=os.cpu_count()):
+@retry(tries=3, delay=1, logger=logger)
+def coreg2(master, slave, outfile, logfile, dem_dict, gpt_max_workers=os.cpu_count()):
     '''A wrapper around SNAP's back-geocoding co-registration routine
 
     This function takes a list of 2 OST imported Sentinel-1 SLC products
@@ -369,7 +302,7 @@ def coreg2(master, slave, outfile, logfile, dem_dict, ncores=os.cpu_count()):
                        'SRTM 3sec'
                        'ASTER 1sec GDEM'
                        'ACE30'
-        ncores(int): the number of cpu cores to allocate to the gpt job - defaults to cpu count
+        gpt_max_workers(int): the number of cpu cores to allocate to the gpt job - defaults to cpu count
 
 
     '''
@@ -386,7 +319,7 @@ def coreg2(master, slave, outfile, logfile, dem_dict, ncores=os.cpu_count()):
                ' -Pdem_nodata=\'{}\''
                ' -Pdem_resampling=\'{}\''
                ' -Poutput={} '.format(
-        GPT_FILE, graph, 2*ncores,
+        GPT_FILE, graph, 2*gpt_max_workers,
         master, slave,
         dem_dict['dem_name'], dem_dict['dem_file'],
         dem_dict['dem_nodata'], dem_dict['dem_resampling'],
@@ -404,9 +337,9 @@ def coreg2(master, slave, outfile, logfile, dem_dict, ncores=os.cpu_count()):
                               )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def coherence(infile, outfile, logfile, ard,
-              ncores=os.cpu_count()):
+              gpt_max_workers=os.cpu_count()):
     '''A wrapper around SNAP's coherence routine
 
     This function takes a co-registered stack of 2 Sentinel-1 SLC products
@@ -419,7 +352,7 @@ def coherence(infile, outfile, logfile, ard,
                  file written in BEAM-Dimap format
         logfile: string or os.path object for the file
                  where SNAP'S STDOUT/STDERR is written to
-        ncores(int): the number of cpu cores to allocate to the gpt job,
+        gpt_max_workers(int): the number of cpu cores to allocate to the gpt job,
                 default: os.cpu_count()
     '''
 
@@ -430,7 +363,7 @@ def coherence(infile, outfile, logfile, ard,
     command = '{} {} -x -q {} ' \
               '-Pazimuth_window={} -Prange_window={} ' \
               '-Ppolar=\'{}\' -Pinput={} -Poutput={}' \
-        .format(GPT_FILE, graph, 2*ncores,
+        .format(GPT_FILE, graph, 2*gpt_max_workers,
                 ard['coherence_azimuth'], ard['coherence_range'],
                 polar, infile, outfile)
 

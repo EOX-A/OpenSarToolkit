@@ -7,7 +7,7 @@ import tqdm
 from pathlib import Path
 import logging
 from shapely.wkt import loads
-from retrying import retry
+from retry import retry
 
 from godale import Executor
 
@@ -229,7 +229,7 @@ def check_connection(uname, pword):
     return response.status_code
 
 
-@retry(stop_max_attempt_number=7, wait_fixed=5)
+@retry(tries=7, delay=5)
 def s1_download(argument_list):
     '''Function to download a single Sentinel-1 product from Copernicus scihub
 

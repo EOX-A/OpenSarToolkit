@@ -3,7 +3,7 @@ import logging
 import requests
 import tqdm
 from pathlib import Path
-from retrying import retry
+from retry import retry
 
 from godale import Executor
 
@@ -72,7 +72,7 @@ def check_connection(uname, pword):
     return response.status_code
 
 
-@retry(stop_max_attempt_number=5)
+@retry(tries=5)
 def s1_download(argument_list):
     """
     This function will download S1 products from ASF mirror.

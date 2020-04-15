@@ -6,6 +6,9 @@ Changelog
 -----
 0.9.5
 -----
+* changed retrying module to retry
+    * reason: could find how to get log/error output of retrying module
+    * Conda installation is far away
 * updated Timeseries and Timescan for the current GRD processing
     * tests run only on 1 Product, TODO test on multiple
     * TODO test on burst(s)
@@ -23,7 +26,7 @@ Changelog
 * defined a default OST Geotiff profile for rasterio in settings/py
 * Project class now gets HERBERT for search and download as default
 * renamed the number of cores to be used for GPT and regular concurency to:
-    * config_dict['gpt_max_workers']
+    * config_dict['gpt_max_workers'] (down to the wrappers!)
     * config_dict['godale_max_workers']
 * Layover shadow masks converted to gpkg vector file
 * GRD batch processing now returns updated inventory with paths to ard products

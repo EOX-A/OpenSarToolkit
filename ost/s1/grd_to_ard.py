@@ -6,7 +6,7 @@ import time
 import rasterio
 import numpy as np
 import gdal
-from retrying import retry
+from retry import retry
 
 from os.path import join as opj
 
@@ -367,131 +367,9 @@ def grd_to_ard(filelist,
         out_ls_mask = None
 
     return return_code, out_final + '.dim', out_ls_mask
-            
-
-def ard_to_rgb(infile, outfile, driver='GTiff', to_db=True):
-
-    prefix = glob.glob(os.path.abspath(infile[:-4]) + '*data')[0]
-
-    if len(glob.glob(opj(prefix, '*VV*.img'))) == 1:
-        co_pol = glob.glob(opj(prefix, '*VV*.img'))[0]
-
-    if len(glob.glob(opj(prefix, '*VH*.img'))) == 1:
-        cross_pol = glob.glob(opj(prefix, '*VH*.img'))[0]
-
-    if len(glob.glob(opj(prefix, '*HH*.img'))) == 1:
-        co_pol = glob.glob(opj(prefix, '*HH*.img'))[0]
-
-    if len(glob.glob(opj(prefix, '*HV*.img'))) == 1:
-        cross_pol = glob.glob(opj(prefix, '*HV*.img'))[0]
-
-    # !!!!assure and both pols exist!!!
-    with rasterio.open(co_pol) as co, rasterio.open(cross_pol) as cr:
-
-        # get meta data
-        meta = co.meta
-
-        # update meta
-        meta.update(driver=driver, count=3, nodata=0, compress='deflate')
-
-        # !assure that dimensions match ####
-        with rasterio.open(outfile, 'w', **meta) as dst:
-            if co.shape != cr.shape:
-                print(' dimensions do not match')
-            # loop through blocks
-            for i, window in co.block_windows(1):
-
-                # read arrays and turn to dB (in case it isn't)
-                co_array = co.read(window=window)
-                cr_array = cr.read(window=window)
-
-                if to_db:
-                    # turn to db
-                    co_array = ras.convert_to_db(co_array)
-                    cr_array = ras.convert_to_db(cr_array)
-
-                    # adjust for dbconversion
-                    co_array[co_array == -130] = 0
-                    cr_array[cr_array == -130] = 0
-
-                # turn 0s to nan
-                co_array[co_array == 0] = np.nan
-                cr_array[cr_array == 0] = np.nan
-
-                # create log ratio by subtracting the dbs
-                ratio_array = np.subtract(co_array, cr_array)
-
-                # write file
-                for k, arr in [(1, co_array), (2, cr_array),
-                               (3, ratio_array)]:
-                    dst.write(arr[0, ], indexes=k, window=window)
-    return outfile
 
 
-def ard_to_thumbnail(infile, outfile, driver='JPEG', shrink_factor=25,
-                     to_db=True):
-
-    prefix = glob.glob(os.path.abspath(infile[:-4]) + '*data')[0]
-
-    if len(glob.glob(opj(prefix, '*VV*.img'))) == 1:
-        co_pol = glob.glob(opj(prefix, '*VV*.img'))[0]
-
-    if len(glob.glob(opj(prefix, '*VH*.img'))) == 1:
-        cross_pol = glob.glob(opj(prefix, '*VH*.img'))[0]
-
-    if len(glob.glob(opj(prefix, '*HH*.img'))) == 1:
-        co_pol = glob.glob(opj(prefix, '*HH*.img'))[0]
-
-    if len(glob.glob(opj(prefix, '*HV*.img'))) == 1:
-        cross_pol = glob.glob(opj(prefix, '*HV*.img'))[0]
-
-    # !!!assure and both pols exist
-    with rasterio.open(co_pol) as co:
-
-        # get meta data
-        meta = co.meta
-
-        # update meta
-        meta.update(driver=driver, count=3, dtype='uint8')
-
-        with rasterio.open(cross_pol) as cr:
-
-            # !!!assure that dimensions match ####
-            new_height = int(co.height/shrink_factor)
-            new_width = int(co.width/shrink_factor)
-            out_shape = (co.count, new_height, new_width)
-
-            meta.update(height=new_height, width=new_width)
-
-            if co.shape != cr.shape:
-                print(' dimensions do not match')
-
-            # read arrays and turn to dB
-
-            co_array = co.read(out_shape=out_shape, resampling=5)
-            cr_array = cr.read(out_shape=out_shape, resampling=5)
-
-            if to_db:
-                co_array = ras.convert_to_db(co_array)
-                cr_array = ras.convert_to_db(cr_array)
-
-            co_array[co_array == 0] = np.nan
-            cr_array[cr_array == 0] = np.nan
-
-            # create log ratio
-            ratio_array = np.subtract(co_array, cr_array)
-
-            r = ras.scale_to_int(co_array, -20, 0, 'uint8')
-            g = ras.scale_to_int(cr_array, -25, -5, 'uint8')
-            b = ras.scale_to_int(ratio_array, 1, 15, 'uint8')
-
-            with rasterio.open(outfile, 'w', **meta) as dst:
-
-                for k, arr in [(1, r), (2, g), (3, b)]:
-                    dst.write(arr[0, ], indexes=k)
-
-
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def _grd_frame_import(infile, outfile, logfile, polarisation='VV,VH,HH,HV'):
     '''A wrapper of SNAP import of a single Sentinel-1 GRD product
 
@@ -536,7 +414,7 @@ def _grd_frame_import(infile, outfile, logfile, polarisation='VV,VH,HH,HV'):
                               )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def _grd_frame_import_subset(infile,
                              outfile,
                              georegion,
@@ -592,7 +470,7 @@ def _grd_frame_import_subset(infile,
                               )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
     '''A wrapper of SNAP's slice assembly routine
 
@@ -629,7 +507,7 @@ def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
         )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def _grd_subset(infile, outfile, logfile, region):
     '''A wrapper around SNAP's subset routine
 
@@ -666,7 +544,7 @@ def _grd_subset(infile, outfile, logfile, region):
                               )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def _grd_subset_georegion(infile, outfile, logfile, georegion):
     '''A wrapper around SNAP's subset routine
 
@@ -705,7 +583,7 @@ def _grd_subset_georegion(infile, outfile, logfile, georegion):
         )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def _grd_remove_border(infile):
     '''An OST function to remove GRD border noise from Sentinel-1 data
 

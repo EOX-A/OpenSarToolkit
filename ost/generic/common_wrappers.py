@@ -1,6 +1,6 @@
 import os
 import logging
-from retrying import retry
+from retry import retry
 from os.path import join as opj
 from pathlib import Path
 
@@ -11,7 +11,7 @@ from ost.helpers.errors import GPTRuntimeError
 logger = logging.getLogger(__name__)
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def calibration(infile, outfile, logfile, calibrate_to, gpt_max_workers=os.cpu_count()):
     # transform calibration parameter to snap readable
     sigma0, beta0, gamma0 = 'false', 'false', 'false'
@@ -50,7 +50,7 @@ def calibration(infile, outfile, logfile, calibrate_to, gpt_max_workers=os.cpu_c
     return return_code
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def multi_look(infile, outfile, logfile, rg_looks, az_looks, gpt_max_workers=os.cpu_count()):
     logger.info('Multi-looking the image with {} looks in'
                 ' azimuth and {} looks in range.'.format(az_looks, rg_looks)
@@ -79,7 +79,7 @@ def multi_look(infile, outfile, logfile, rg_looks, az_looks, gpt_max_workers=os.
     return return_code
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def speckle_filter(infile, outfile, logfile, speckle_dict,
                    gpt_max_workers=os.cpu_count()):
     """ Wrapper around SNAP's peckle Filter function
@@ -143,7 +143,7 @@ def speckle_filter(infile, outfile, logfile, speckle_dict,
         )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def linear_to_db(infile, outfile, logfile, gpt_max_workers=os.cpu_count()):
     """A wrapper around SNAP's linear to db routine
 
@@ -218,7 +218,7 @@ def terrain_flattening(
         )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def terrain_correction(infile,
                        outfile,
                        logfile,
@@ -286,7 +286,7 @@ def terrain_correction(infile,
         )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def ls_mask(infile, outfile, logfile, ard, gpt_max_workers=os.cpu_count()):
     """
 
@@ -329,7 +329,7 @@ def ls_mask(infile, outfile, logfile, ard, gpt_max_workers=os.cpu_count()):
         )
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def create_stack(filelist, out_stack, logfile,
                  polarisation=None, pattern=None, gpt_max_workers=os.cpu_count()):
     '''
@@ -363,7 +363,7 @@ def create_stack(filelist, out_stack, logfile,
     return return_code
 
 
-@retry(stop_max_attempt_number=3, wait_fixed=1)
+@retry(tries=3, delay=1, logger=logger)
 def mt_speckle_filter(
         in_stack,
         out_stack,

@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -23,7 +22,7 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
         temp_dir:
         out_dir:
         burst_id:
-        ncores:
+        gpt_max_workers:
 
     Returns:
 
@@ -31,7 +30,7 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
 
     # get relevant config parameters
     ard = config_dict['processing']['single_ARD']
-    gpt_cpus = config_dict['gpt_max_workers']
+    gpt_max_workers = config_dict['gpt_max_workers']
 
     # temp dir for intermediate files
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
@@ -48,7 +47,7 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
         # run polarimetric decomposition
         slc.ha_alpha(
             import_file, out_haa, haa_log, ard['remove_pol_speckle'],
-            ard['pol_speckle_filter'], gpt_cpus
+            ard['pol_speckle_filter'], gpt_max_workers
         )
 
         # -------------------------------------------------------
@@ -63,7 +62,7 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
         # run geocoding
         common.terrain_correction(
             '{}.dim'.format(out_haa), out_htc, haa_tc_log,
-            ard['resolution'], ard['dem'], gpt_cpus
+            ard['resolution'], ard['dem'], gpt_max_workers
         )
 
         # last check on the output files
@@ -74,10 +73,6 @@ def create_polarimetric_layers(import_file, out_dir, burst_prefix,
 
         # move to final destination
         h.move_dimap(out_htc, out_dir.joinpath(f'{burst_prefix}_pol'))
-
-        # write out check file for tracking that it is processed
-        with open(out_dir.joinpath('.pol.processed'), 'w+') as file:
-            file.write('passed all tests \n')
 
 
 def create_backscatter_layers(
@@ -97,7 +92,7 @@ def create_backscatter_layers(
 
     # get relevant config parameters
     ard = config_dict['processing']['single_ARD']
-    gpt_cpus = config_dict['gpt_max_workers']
+    gpt_max_workers = config_dict['gpt_max_workers']
 
     # temp dir for intermediate files
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
@@ -116,7 +111,12 @@ def create_backscatter_layers(
 
         # run calibration on imported scene
         slc.calibration(
-            import_file, out_cal, cal_log, ard, region='', ncores=gpt_cpus
+            import_file,
+            out_cal,
+            cal_log,
+            ard,
+            region='',
+            gpt_max_workers=gpt_max_workers
         )
 
         # ---------------------------------------------------------------------
@@ -132,7 +132,7 @@ def create_backscatter_layers(
             # run speckle filter on calibrated input
             common.speckle_filter(
                 f'{out_cal}.dim', speckle_import, speckle_log,
-                ard['speckle_filter'], gpt_cpus
+                ard['speckle_filter'], gpt_max_workers
             )
 
             # remove input
@@ -152,7 +152,7 @@ def create_backscatter_layers(
             db_log = out_dir.joinpath(f'{burst_prefix}_cal_db.err_log')
 
             # run db scaling on calibrated/speckle filtered input
-            common.linear_to_db(f'{out_cal}.dim', out_db, db_log, gpt_cpus)
+            common.linear_to_db(f'{out_cal}.dim', out_db, db_log, gpt_max_workers)
 
             # remove tmp files
             h.delete_dimap(out_cal)
@@ -172,7 +172,7 @@ def create_backscatter_layers(
         # run terrain correction on calibrated/speckle filtered/db  input
         common.terrain_correction(
             f'{out_cal}.dim', out_tc, tc_log,
-            ard['resolution'], ard['dem'], gpt_cpus
+            ard['resolution'], ard['dem'], gpt_max_workers
         )
 
         # check for validity of final backscatter product
@@ -196,7 +196,7 @@ def create_backscatter_layers(
             ls_log = out_dir.joinpath(f'{burst_prefix}_LS.err_log')
 
             # run ls mask generation on calibration
-            common.ls_mask(f'{out_cal}.dim', out_ls, ls_log, ard, gpt_cpus)
+            common.ls_mask(f'{out_cal}.dim', out_ls, ls_log, ard, gpt_max_workers)
 
             # check for validity of final backscatter product
             try:
@@ -208,10 +208,6 @@ def create_backscatter_layers(
             out_final_ls = out_dir.joinpath(f'{burst_prefix}_LS')
             h.move_dimap(out_ls, out_final_ls)
 
-        # write out check file for tracking that it is processed
-        with open(out_dir.joinpath('.bs.processed'), 'w+') as file:
-            file.write('passed all tests \n')
-
     # Return colected files that have been processed
     if ard['create_ls_mask']:
         out_ls_mask = str(out_final_ls) + '.dim'
@@ -219,7 +215,7 @@ def create_backscatter_layers(
     else:
         out_ls_mask = None
 
-    return out_bs + '.dim', out_ls_mask
+    return str(out_bs) + '.dim', out_ls_mask
 
 
 def create_coherence_layers(
@@ -238,7 +234,7 @@ def create_coherence_layers(
 
     # get relevant config parameters
     ard = config_dict['processing']['single_ARD']
-    gpt_cpus = config_dict['gpt_max_workers']
+    gpt_max_workers = config_dict['gpt_max_workers']
 
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
 
@@ -254,7 +250,7 @@ def create_coherence_layers(
         # run co-registration
         slc.coreg(
             master_import, slave_import, out_coreg, coreg_log,
-            ard['dem'], gpt_cpus
+            ard['dem'], gpt_max_workers
         )
 
         # remove imports
@@ -273,7 +269,7 @@ def create_coherence_layers(
         coh_log = out_dir.joinpath(f'{master_prefix}_coh.err_log')
 
         # run coherence estimation
-        slc.coherence(f'{out_coreg}.dim', out_coh, coh_log, ard, gpt_cpus)
+        slc.coherence(f'{out_coreg}.dim', out_coh, coh_log, ard, gpt_max_workers)
 
         # remove coreg tmp files
         h.delete_dimap(out_coreg)
@@ -290,7 +286,7 @@ def create_coherence_layers(
         # run geocoding
         common.terrain_correction(
             f'{out_coh}.dim', out_tc, tc_log,
-            ard['resolution'], ard['dem'], gpt_cpus
+            ard['resolution'], ard['dem'], gpt_max_workers
         )
 
         # ---------------------------------------------------------------
@@ -308,10 +304,6 @@ def create_coherence_layers(
         # move to final destination
         h.move_dimap(out_tc, out_dir.joinpath(f'{master_prefix}_coh'))
 
-        # write out check file for tracking that it is processed
-        with open(out_dir.joinpath('.coh.processed'), 'w+') as file:
-            file.write('passed all tests \n')
-
 
 def burst_to_ard(burst, config_dict):
     # no this is gdf thing (id, gdf_row)
@@ -320,22 +312,21 @@ def burst_to_ard(burst, config_dict):
 
     ard = config_dict['processing']['single_ARD']
     temp_dir = Path(config_dict['temp_dir'])
-    gpt_cpus = config_dict['gpt_max_workers']
+    gpt_max_workers = config_dict['gpt_max_workers']
 
     # creation of out_directory
     out_dir = Path(burst.out_directory)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    pol_file = None
+    bs_file = None
+    coh_file = None
 
     # get info on master from GeoSeries
     master_prefix = burst['master_prefix']
     master_file = burst['file_location']
     master_burst_nr = burst['BurstNr']
     swath = burst['SwathID']
-
-    # existence of processed files
-    pol_file = out_dir.joinpath('.pol.processed').exists()
-    bs_file = out_dir.joinpath('.bs.processed').exists()
-    coh_file = out_dir.joinpath('.coh.processed').exists()
 
     # check if we need to produce coherence
     if ard['coherence']:
@@ -345,11 +336,31 @@ def burst_to_ard(burst, config_dict):
     else:
         coherence = False
 
+    # Get out files
+    if ard['H-A-Alpha']:
+        out_pol = out_dir.joinpath(master_prefix + '_pol.dim')
+        pol_file = out_dir.joinpath('.'+'.'.join([master_prefix, 'pol', 'processed']))
+    else:
+        out_pol = None
+
+    if ard['backscatter']:
+        out_bs = out_dir.joinpath(master_prefix + '_bs.dim')
+        out_ls = out_dir.joinpath(master_prefix + '_LS.gpkg')
+        bs_file = out_dir.joinpath('.'+'.'.join([master_prefix, 'bs', 'processed']))
+    else:
+        out_bs, out_ls = None, None
+
+    if coherence:
+        out_coh = out_dir.joinpath(master_prefix + '_coh.dim')
+        coh_file = out_dir.joinpath('.'+'.'.join([master_prefix, 'coh', 'processed']))
+    else:
+        out_coh = None
+
     # check if somethings already processed
     if (
-            (ard['H-A-Alpha'] and not pol_file) or
-            (ard['backscatter'] and not bs_file) or
-            (coherence and not coh_file)
+            (ard['H-A-Alpha'] and not pol_file.exists()) or
+            (ard['backscatter'] and not bs_file.exists()) or
+            (coherence and not coh_file.exists())
     ):
 
         # ---------------------------------------------------------------------
@@ -368,7 +379,7 @@ def burst_to_ard(burst, config_dict):
             # run import
             return_code = slc.burst_import(
                 master_file, master_import, import_log, swath,
-                master_burst_nr, polars, gpt_cpus
+                master_burst_nr, polars, gpt_max_workers
             )
             if return_code != 0:
                 h.delete_dimap(master_import)
@@ -376,17 +387,23 @@ def burst_to_ard(burst, config_dict):
 
         # ---------------------------------------------------------------------
         # 2 Product Generation
-        if ard['H-A-Alpha'] and not pol_file:
+        if ard['H-A-Alpha'] and not pol_file.exists():
             create_polarimetric_layers(
                 f'{master_import}.dim', out_dir, master_prefix, config_dict
             )
+            # write out check file for tracking that it is processed
+            with open(pol_file, 'w+') as file:
+                file.write('passed all tests \n')
 
-        if ard['backscatter'] and not bs_file:
+        if ard['backscatter'] and not bs_file.exists():
             out_bs, out_ls = create_backscatter_layers(
                 f'{master_import}.dim', out_dir, master_prefix, config_dict
             )
+            # write out check file for tracking that it is processed
+            with open(bs_file, 'w+') as file:
+                file.write('passed all tests \n')
 
-        if coherence and not coh_file:
+        if coherence and not coh_file.exists():
             # get info on master from GeoSeries
             slave_prefix = burst['slave_prefix']
             slave_file = burst['slave_file']
@@ -398,7 +415,7 @@ def burst_to_ard(burst, config_dict):
             polars = ard['polarisation'].replace(' ', '')
             return_code = slc.burst_import(
                 slave_file, slave_import, import_log, swath, slave_burst_nr,
-                polars, gpt_cpus
+                polars, gpt_max_workers
             )
 
             if return_code != 0:
@@ -409,23 +426,11 @@ def burst_to_ard(burst, config_dict):
                 f'{master_import}.dim', f'{slave_import}.dim', out_dir,
                 master_prefix, config_dict
             )
+            # write out check file for tracking that it is processed
+            with open(coh_file, 'w+') as file:
+                file.write('passed all tests \n')
         else:
             # remove master import
             h.delete_dimap(master_import)
-
-    # Get out files after the processing if any
-    if ard['H-A-Alpha']:
-        out_pol = out_dir.joinpath(master_prefix + '_pol.dim')
-    else:
-        out_pol = None
-    if ard['backscatter']:
-        out_bs = out_dir.joinpath(master_prefix + '_bs.dim')
-        out_ls = out_dir.joinpath(master_prefix + '_LS.gpkg')
-    else:
-        out_bs, out_ls = None, None
-    if coherence:
-        out_coh = out_dir.joinpath(master_prefix + '_coh.dim')
-    else:
-        out_coh = None
 
     return out_bs, out_ls, out_coh, out_pol

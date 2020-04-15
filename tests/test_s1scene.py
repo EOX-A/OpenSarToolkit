@@ -22,26 +22,26 @@ def test_s1scene_metadata(s1_id):
     assert s1.scene_id == control_id
 
 
-def test_s1scene_slc_processing(s1_slc_ost_master,
-                                slc_project_class,
-                                some_bounds_slc,
-                                ):
-    s1scene = s1_slc_ost_master[1]
-    aoi = box(some_bounds_slc[0], some_bounds_slc[1],
-              some_bounds_slc[2], some_bounds_slc[3]
-              ).wkt
-    out_files_dict = s1scene.create_ard(
-        download_dir=slc_project_class.download_dir,
-        out_dir=slc_project_class.project_dir,
-        overwrite=True,
-        subset=aoi
-        )
-    out_tif = s1scene.create_rgb(
-        outfile=os.path.join(str(slc_project_class.project_dir), s1scene.scene_id+'.tif')
-    )
-    assert os.path.exists(out_files_dict['bs'][0][1])
-    assert os.path.exists(out_files_dict['ls'][0])
-    assert os.path.exists(out_tif)
+# def test_s1scene_slc_processing(s1_slc_ost_master,
+#                                 slc_project_class,
+#                                 some_bounds_slc,
+#                                 ):
+#     s1scene = s1_slc_ost_master[1]
+#     aoi = box(some_bounds_slc[0], some_bounds_slc[1],
+#               some_bounds_slc[2], some_bounds_slc[3]
+#               ).wkt
+#     out_files_dict = s1scene.create_ard(
+#         download_dir=slc_project_class.download_dir,
+#         out_dir=slc_project_class.project_dir,
+#         overwrite=True,
+#         subset=aoi
+#         )
+#     out_tif = s1scene.create_rgb(
+#         outfile=os.path.join(str(slc_project_class.project_dir), s1scene.scene_id+'.tif')
+#     )
+#     assert os.path.exists(out_files_dict['bs'][0][1])
+#     assert os.path.exists(out_files_dict['ls'][0])
+#     assert os.path.exists(out_tif)
 
 
 def test_s1scene_grd_processing(s1_grd_notnr_ost_product,

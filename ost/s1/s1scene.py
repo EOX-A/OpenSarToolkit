@@ -23,7 +23,7 @@ from shapely.wkt import loads
 
 from ost.helpers import helpers as h
 from ost.helpers import scihub, peps, onda, raster as ras
-from ost.s1.grd_to_ard import grd_to_ard, ard_to_rgb, ard_to_thumbnail
+from ost.s1.grd_to_ard import grd_to_ard
 from ost.s1.burst_batch import bursts_to_ards
 from ost.helpers.settings import APIHUB_BASEURL, check_ard_parameters
 from ost.s1 import burst_inventory
@@ -822,7 +822,8 @@ class Sentinel1Scene:
                 self.config_dict['download_dir'] = Path(download_dir)
                 self.config_dict['temp_dir'] = Path(temp)
                 self.config_dict['data_mount'] = self.data_mount
-                self.config_dict['gpt_max_workers'] = max_workers
+                self.config_dict['godale_max_workers'] = max_workers
+                self.config_dict['gpt_max_workers'] = 1
 
                 exception_flag = True
                 exception_counter = 0
@@ -837,7 +838,7 @@ class Sentinel1Scene:
                             max_workers=max_workers
                         )
                     except Exception as e:
-                        logger.debug(e)
+                        logger.info(e)
                         max_workers = int(max_workers/2)
                         exception_counter += 1
                     else:

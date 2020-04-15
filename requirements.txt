@@ -13,7 +13,7 @@ shapely
 tqdm
 imageio
 joblib
-retrying
+retry
 pytest
 pytest-cov
 pytest-runner

@@ -14,7 +14,8 @@ from ost.generic import ts_ls_mask
 from ost.generic import ard_to_ts
 from ost.generic import timescan
 from ost.generic import mosaic
-from ost.s1.grd_to_ard import ard_to_rgb, grd_to_ard
+from ost.s1.grd_to_ard import grd_to_ard
+from ost.s1.ard_to_rgb import ard_to_rgb
 
 logger = logging.getLogger(__name__)
 
