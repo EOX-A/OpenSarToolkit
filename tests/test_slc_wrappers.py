@@ -26,7 +26,7 @@ def test_burst_import(s1_slc_master,
             swath=burst.SwathID,
             burst=burst.BurstNr,
             polar='VV,VH,HH,HV',
-            ncores=os.cpu_count()
+            gpt_max_workers=os.cpu_count()
         )
         assert return_code == 0
 
@@ -61,7 +61,7 @@ def test_burst_calibration(s1_slc_ost_master,
             logfile=logger,
             ard=ard_params,
             region=slc_project_class.aoi,
-            ncores=os.cpu_count())
+            gpt_max_workers=os.cpu_count())
 
         assert return_code == 0
 
@@ -87,6 +87,6 @@ def test_burst_ha_alpha(
             pol_speckle_filter=False,
             pol_speckle_dict=slc_project_class.ard_parameters
             ['single ARD']['pol speckle filter'],
-            ncores=os.cpu_count()
+            gpt_max_workers=os.cpu_count()
         )
         assert return_code == 0

@@ -6,6 +6,8 @@ Changelog
 -----
 0.9.5
 -----
+* restored GRD processing
+* Project GRD and burst processing goes up to (including) Timescans
 * changed retrying module to retry
     * reason: could find how to get log/error output of retrying module
     * Conda installation is far away

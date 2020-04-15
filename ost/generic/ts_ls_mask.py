@@ -32,6 +32,7 @@ def mt_layover(
         # create a vrt-stack out of
         logger.info('Creating common Layover/Shadow Mask')
         vrt_options = gdal.BuildVRTOptions(srcNodata=0, separate=True)
+        logger.info(filelist)
         gdal.BuildVRT(
             str(temp.joinpath('ls.vrt')), filelist, options=vrt_options
         )

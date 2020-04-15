@@ -207,7 +207,7 @@ def check_out_dimap(dimap_prefix, test_stats=True):
         # check size
         data_size_in_mb = os.path.getsize(file) / 1048576
 
-        if data_size_in_mb < 1:
+        if data_size_in_mb < 0.5:
             raise ValueError(' Data file {} in {}.data seem to small.'
                              .format(file, dimap_prefix)
                              )

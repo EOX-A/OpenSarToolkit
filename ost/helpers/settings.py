@@ -187,7 +187,9 @@ CONFIG_CHECK = dict({
                       },
     'ard_types_slc': {'type': str,
                       'choices':
-                          ['OST-COH', 'OST-RTCCOH', 'OST-POL', 'OST-ALL']
+                          ['OST-GTC', 'OST-RTC', 'OST-COH',
+                           'OST-RTCCOH', 'OST-POL', 'OST-ALL'
+                           ]
                       },
     'resolution': {'type': int, 'choices': range(10, 5000)},
     'backscatter': {'type': bool},

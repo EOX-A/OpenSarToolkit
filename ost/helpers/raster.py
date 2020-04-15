@@ -237,14 +237,9 @@ def mask_by_shape(
                     '{}'.format(os.path.basename(infile)[:-4]))
 
 
-def create_tscan_vrt(list_of_args):
+def create_tscan_vrt(timescan_dir, config_dict):
 
-    timescan_dir, project_file = list_of_args
-
-    # load ard parameters
-    with open(project_file, 'r') as ard_file:
-        ard_params = json.load(ard_file)['processing']
-        ard_tscan = ard_params['time-scan_ARD']
+    ard_tscan = config_dict['processing']['time-scan_ARD']
 
     # loop through all potential products
     # a products list

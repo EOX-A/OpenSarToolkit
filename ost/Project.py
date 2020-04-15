@@ -16,7 +16,7 @@ from ost.helpers import scihub, helpers as h
 from ost.helpers.settings import set_log_level, setup_logfile, OST_ROOT
 from ost.helpers.settings import check_ard_parameters, HERBERT_USER
 
-from ost.s1 import burst_inventory, burst_batch
+from ost.s1 import burst_inventory, burst_batch, burst_ts
 from ost.s1 import search, refine, download, grd_batch
 
 
@@ -657,10 +657,8 @@ class Sentinel1Batch(Sentinel1):
                 self.config_dict
             )
 
-        if cut_to_aoi:
-            cut_to_aoi = self.aoi
-
         if mosaic and timeseries:
+            raise NotImplementedError
             grd_batch.mosaic_timeseries(
                 self.inventory,
                 self.processing_dir,
@@ -721,41 +719,40 @@ class Sentinel1Batch(Sentinel1):
         # --------------------------------------------
         # 6 run the timeseries creation
         if timeseries or timescan:
-            burst_batch.ards_to_timeseries(
-                self.burst_inventory,
-                self.config_file,
-                max_workers=max_workers,
-                executor_type=self.executor_type
+            burst_ts.ards_to_timeseries(
+                burst_gdf=self.burst_inventory,
+                config_dict=self.config_dict,
+                # max_workers=max_workers,
+                # executor_type=self.executor_type
             )
 
         # --------------------------------------------
         # 7 run the timescan creation
         if timescan:
-            burst_batch.timeseries_to_timescan(
-                self.burst_inventory,
-                self.config_file,
-                max_workers=max_workers,
-                executor_type=self.executor_type
+            burst_ts.timeseries_to_timescan(
+                burst_gdf=self.burst_inventory,
+                config_dict=self.config_dict,
+                # max_workers=max_workers,
+                # executor_type=self.executor_type
             )
 
         # --------------------------------------------
         # 8 mosaic the time-series
         if mosaic and timeseries:
-            burst_batch.mosaic_timeseries(
-                self.burst_inventory,
-                self.config_file,
-                max_workers=max_workers,
-                executor_type=self.executor_type
+            raise NotImplementedError
+            burst_ts.mosaic_timeseries(
+                burst_gdf=self.burst_inventory,
+                config_dict=self.config_dict,
+                # max_workers=max_workers,
+                # executor_type=self.executor_type
             )
 
         # --------------------------------------------
         # 9 mosaic the timescans
         if mosaic and timescan:
-            burst_batch.mosaic_timescan(
+            burst_ts.mosaic_timescan(
                 self.burst_inventory,
                 self.config_file,
-                max_workers=max_workers,
-                executor_type=self.executor_type
             )
 
     def create_timeseries_animation(

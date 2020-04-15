@@ -1,3 +1,4 @@
+import shutil
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -183,12 +184,12 @@ def create_backscatter_layers(
             pass
 
         # move final backscatter product to actual output directory
-        h.move_dimap(out_tc, out_bs)
+        if out_bs is not None:
+            h.move_dimap(out_tc, out_bs)
 
         # ---------------------------------------------------------------------
         # 9 Layover/Shadow mask
-        if ard['create_ls_mask']:
-
+        if ard['create_ls_mask'] and out_bs is not None:
             # create namespace for temporary LS map product
             out_ls = temp.joinpath(f'{burst_prefix}_LS')
 
@@ -202,14 +203,18 @@ def create_backscatter_layers(
             try:
                 h.check_out_dimap(out_ls)
             except ValueError:
+                out_ls = None
                 pass
 
             # move ls data to final destination
-            out_final_ls = out_dir.joinpath(f'{burst_prefix}_LS')
-            h.move_dimap(out_ls, out_final_ls)
+            if out_ls is not None:
+                out_final_ls = out_dir.joinpath(f'{burst_prefix}_LS')
+                h.move_dimap(out_ls, out_final_ls)
+            else:
+                out_final_ls = None
 
     # Return colected files that have been processed
-    if ard['create_ls_mask']:
+    if ard['create_ls_mask'] and out_bs is not None:
         out_ls_mask = str(out_final_ls) + '.dim'
         out_ls_mask = ls_to_vector(infile=out_ls_mask, driver='GPKG')
     else:
@@ -384,6 +389,13 @@ def burst_to_ard(burst, config_dict):
             if return_code != 0:
                 h.delete_dimap(master_import)
                 raise GPTRuntimeError('Something with importing went wrong!')
+        # Catch empty burst if any
+        try:
+            h.check_out_dimap(master_import)
+        except ValueError:
+            with open(bs_file, 'w+') as file:
+                file.write('is empty \n')
+            return None, None, None, None
 
         # ---------------------------------------------------------------------
         # 2 Product Generation
@@ -400,8 +412,9 @@ def burst_to_ard(burst, config_dict):
                 f'{master_import}.dim', out_dir, master_prefix, config_dict
             )
             # write out check file for tracking that it is processed
-            with open(bs_file, 'w+') as file:
-                file.write('passed all tests \n')
+            if out_bs is not None:
+                with open(bs_file, 'w+') as file:
+                    file.write('passed all tests \n')
 
         if coherence and not coh_file.exists():
             # get info on master from GeoSeries

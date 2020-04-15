@@ -13,25 +13,23 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------
 # Global variable
 PRODUCT_LIST = [
-    'bs.HH', 'bs.VV', 'bs.HV', 'bs.VH',
-    'coh.VV', 'coh.VH', 'coh.HH', 'coh.HV',
-    'pol.Entropy', 'pol.Anisotropy', 'pol.Alpha'
+    'bs_HH', 'bs_VV', 'bs_HV', 'bs_VH',
+    'coh_VV', 'coh_VH', 'coh_HH', 'coh_HV',
+    'pol_Entropy', 'pol_Anisotropy', 'pol_Alpha'
 ]
 
 
-def _create_extents(burst_gdf, config_file):
-
-    with open(config_file, 'r') as file:
-        config_dict = json.load(file)['project']
-        processing_dir = Path(config_dict['processing_dir'])
-        temp_dir = Path(config_dict['temp_dir'])
+def _create_extents(burst_gdf, config_dict):
+    processing_dir = Path(config_dict['processing_dir'])
+    temp_dir = Path(config_dict['temp_dir'])
 
     # create extent iterable
-    iter_list = []
     for burst in burst_gdf.bid.unique():  # ***
 
         # get the burst directory
         burst_dir = processing_dir.joinpath(burst)
+        if _burstdir_is_empty(burst_dir):
+            continue
 
         # get common burst extent
         list_of_bursts = list(burst_dir.glob('**/*img'))
@@ -40,31 +38,25 @@ def _create_extents(burst_gdf, config_file):
         ]
         extent = burst_dir.joinpath(f'{burst}.extent.gpkg')
 
-        # if the file does not already exist, add to iterable
-        if not extent.exists():
-            iter_list.append([list_of_bursts, extent, temp_dir, -0.0018])
-
-    # parallelizing on all cpus
-    concurrent = mp.cpu_count()
-    pool = mp.Pool(processes=concurrent)
-    pool.map(ts_extent.mt_extent, iter_list)
+        ts_extent.mt_extent(
+            list_of_scenes=list_of_bursts,
+            out_file=extent,
+            temp_dir=temp_dir,
+            buffer=-0.0018
+        )
 
 
-def _create_mt_ls_mask(burst_gdf, project_file):
-
-    # read config file
-    with open(project_file, 'r') as file:
-        project_params = json.load(file)
-        processing_dir = project_params['project']['processing_dir']
-        temp_dir = project_params['project']['temp_dir']
-        ard = project_params['processing']['time-series_ARD']
+def _create_mt_ls_mask(burst_gdf, config_dict):
+    processing_dir = config_dict['processing_dir']
+    temp_dir = config_dict['temp_dir']
 
     # create layover
-    iter_list = []
     for burst in burst_gdf.bid.unique():  # ***
 
         # get the burst directory
         burst_dir = Path(processing_dir).joinpath(burst)
+        if _burstdir_is_empty(burst_dir):
+            continue
 
         # get layover scenes
         list_of_scenes = list(burst_dir.glob('20*/*data*/*img'))
@@ -82,40 +74,28 @@ def _create_mt_ls_mask(burst_gdf, project_file):
         # layover/shadow mask
         out_ls = burst_dir.joinpath(f'{burst}.ls_mask.tif')
 
-        # if the file does not already exists, then put into list to process
-        if not out_ls.exists():
-            iter_list.append(
-                [list_of_layover, out_ls, temp_dir, str(extent),
-                 ard['apply_ls_mask']]
+        ts_ls_mask.mt_layover(
+            filelist=list_of_layover,
+            outfile=out_ls,
+            temp_dir=temp_dir,
+            extent=str(extent),
             )
 
-    # parallelizing on all cpus
-    concurrent = int(
-        mp.cpu_count() / project_params['project']['cpus_per_process']
-    )
-    pool = mp.Pool(processes=concurrent)
-    pool.map(ts_ls_mask.mt_layover, iter_list)
 
-
-def _create_timeseries(burst_gdf, project_file):
+def _create_timeseries(burst_gdf, config_dict):
 
     # we need a
     dict_of_product_types = {'bs': 'Gamma0', 'coh': 'coh', 'pol': 'pol'}
     pols = ['VV', 'VH', 'HH', 'HV', 'Alpha', 'Entropy', 'Anisotropy']
 
-    # read config file
-    with open(project_file, 'r') as file:
-        project_params = json.load(file)
-        processing_dir = project_params['project']['processing_dir']
+    processing_dir = config_dict['processing_dir']
 
-    # create iterable
-    iter_list = []
     for burst in burst_gdf.bid.unique():
-
         burst_dir = Path(processing_dir).joinpath(burst)
+        if _burstdir_is_empty(burst_dir):
+            continue
 
         for pr, pol in itertools.product(dict_of_product_types.items(), pols):
-
             # unpack items
             product, product_name = list(pr)
 
@@ -132,65 +112,56 @@ def _create_timeseries(burst_gdf, project_file):
                     )
                 )
 
-            if len(list_of_files) <= 1:
+            if len(list_of_files) == 0:
                 continue
 
             # create list of dims if polarisation is present
             list_of_dims = sorted(list(burst_dir.glob(f'20*/*{product}*dim')))
-            iter_list.append([list_of_dims, burst, product, pol, project_file])
 
-    # parallelizing on all cpus
-    concurrent = int(
-        mp.cpu_count() / project_params['project']['cpus_per_process']
-    )
-    pool = mp.Pool(processes=concurrent)
-    pool.map(ard_to_ts.ard_to_ts, iter_list)
+            ard_to_ts.ard_to_ts(
+                list_of_files=list_of_dims,
+                product=product,
+                pol=pol,
+                config_dict=config_dict,
+                burst=burst,
+                track=None,
+            )
 
 
-def ards_to_timeseries(burst_gdf, project_file):
+def ards_to_timeseries(burst_gdf, config_dict):
 
-    print('--------------------------------------------------------------')
     logger.info('Processing all burst ARDs time-series')
-    print('--------------------------------------------------------------')
 
-    # load ard parameters
-    with open(project_file, 'r') as ard_file:
-        ard_params = json.load(ard_file)['processing']
-        ard = ard_params['single_ARD']
-        ard_mt = ard_params['time-series_ARD']
-
+    ard = config_dict['processing']['single_ARD']
+    ard_mt = config_dict['processing']['time-series_ARD']
 
     # create all extents
-    _create_extents(burst_gdf, project_file)
+    _create_extents(burst_gdf, config_dict)
 
     # update extents in case of ls_mask
-    if ard['create_ls_mask'] or ard_mt['apply_ls_mask']:
-        _create_mt_ls_mask(burst_gdf, project_file)
+    if ard['create_ls_mask']:
+        logger.warning('LS mask in Timeseries currently under cosntruction!!')
+        # _create_mt_ls_mask(burst_gdf, config_dict)
 
     # finally create time-series
-    _create_timeseries(burst_gdf, project_file)
+    _create_timeseries(burst_gdf, config_dict)
 
 
 # --------------------
 # timescan part
 # --------------------
-def timeseries_to_timescan(burst_gdf, project_file):
+def timeseries_to_timescan(burst_gdf, config_dict):
     """Function to create a timescan out of a OST timeseries.
 
     """
-
-    print('--------------------------------------------------------------')
     logger.info('Processing all burst ARDs time-series to ARD timescans')
-    print('--------------------------------------------------------------')
 
     # -------------------------------------
     # 1 load project config
-    with open(project_file, 'r') as ard_file:
-        project_params = json.load(ard_file)
-        processing_dir = project_params['project']['processing_dir']
-        ard = project_params['processing']['single_ARD']
-        ard_mt = project_params['processing']['time-series_ARD']
-        ard_tscan = project_params['processing']['time-scan_ARD']
+    processing_dir = config_dict['processing_dir']
+    ard = config_dict['processing']['single_ARD']
+    ard_mt = config_dict['processing']['time-series_ARD']
+    ard_tscan = config_dict['processing']['time-scan_ARD']
 
     # get the db scaling right
     if ard['to_db'] or ard_mt['to_db']:
@@ -201,26 +172,27 @@ def timeseries_to_timescan(burst_gdf, project_file):
 
     # -------------------------------------
     # 2 create iterable for parallel processing
-    iter_list, vrt_iter_list = [], []
     for burst in burst_gdf.bid.unique():
+        logger.debug(burst)
 
         # get relevant directories
         burst_dir = Path(processing_dir).joinpath(burst)
+        if _burstdir_is_empty(burst_dir):
+            continue
         timescan_dir = burst_dir.joinpath('Timescan')
         timescan_dir.mkdir(parents=True, exist_ok=True)
-
+        
         for product in PRODUCT_LIST:
-
             # check if already processed
             if timescan_dir.joinpath(f'.{product}.processed').exists():
-                #logger.info(f'Timescans for burst {burst} already processed.')
+                logger.info(f'Timescans for burst {burst} already processed.')
                 continue
 
             # get respective timeseries
             timeseries = burst_dir.joinpath(
-                f'Timeseries/Timeseries.{product}.vrt'
+                f'Timeseries/Timeseries_{product}.vrt'
             )
-
+            
             # che if this timsereis exists ( since we go through all products
             if not timeseries.exists():
                 continue
@@ -240,25 +212,24 @@ def timeseries_to_timescan(burst_gdf, project_file):
             else:
                 to_power, rescale = False, False
 
-            iter_list.append(
-                [timeseries, timescan_prefix, ard_tscan['metrics'],
-                 rescale, to_power, ard_tscan['remove_outliers'], datelist]
+            timescan.mt_metrics(
+                stack=timeseries,
+                out_prefix=timescan_prefix,
+                metrics=ard_tscan['metrics'],
+                datelist=datelist,
+                rescale_to_datatype=rescale,
+                to_power=to_power,
+                outlier_removal=ard_tscan['remove_outliers'],
             )
 
-        vrt_iter_list.append([timescan_dir, project_file])
-
-    concurrent = mp.cpu_count()
-    pool = mp.Pool(processes=concurrent)
-    pool.map(timescan.mt_metrics, iter_list)
-    pool.map(ras.create_tscan_vrt, vrt_iter_list)
+        ras.create_tscan_vrt(timescan_dir=timescan_dir,
+                             config_dict=config_dict
+                             )
 
 
 def mosaic_timeseries(burst_inventory, project_file):
 
-    print(' -----------------------------------------------------------------')
     logger.info('Mosaicking time-series layers.')
-    print(' -----------------------------------------------------------------')
-
     # -------------------------------------
     # 1 load project config
     with open(project_file, 'r') as ard_file:
@@ -348,16 +319,12 @@ def mosaic_timeseries(burst_inventory, project_file):
     pool.map(mosaic.create_timeseries_mosaic_vrt, vrt_iter_list)
 
 
-def mosaic_timescan(burst_inventory, project_file):
+def mosaic_timescan(burst_inventory, config_dict):
 
-    print(' -----------------------------------------------------------------')
     logger.info('Mosaicking time-scan layers.')
-    print(' -----------------------------------------------------------------')
 
-    with open(project_file, 'r') as ard_file:
-        project_params = json.load(ard_file)
-        processing_dir = project_params['project']['processing_dir']
-        metrics = project_params['processing']['time-scan_ARD']['metrics']
+    processing_dir = config_dict['processing_dir']
+    metrics = config_dict['processing']['time-scan_ARD']['metrics']
 
     if 'harmonics' in metrics:
         metrics.remove('harmonics')
@@ -393,9 +360,24 @@ def mosaic_timescan(burst_inventory, project_file):
 
         logger.info(f'Mosaicking layer {outfile.name}.')
         outfiles.append(outfile)
-        iter_list.append([filelist, outfile, project_file])
+        iter_list.append([filelist, outfile, config_dict])
 
     concurrent = mp.cpu_count()
     pool = mp.Pool(processes=concurrent)
     pool.map(mosaic.mosaic, iter_list)
-    ras.create_tscan_vrt([tscan_dir, project_file])
+    ras.create_tscan_vrt([tscan_dir, config_dict])
+
+
+def _burstdir_is_empty(burst_dir):
+    is_empty = False
+    paths = list(Path(burst_dir).rglob('*.processed'))
+    counter = 0
+    for f in paths:
+        if str(f).endswith('.processed'):
+            with open(str(f), 'r') as pro_f:
+                for line in pro_f.readlines():
+                    if 'empty' in line:
+                        counter += 1
+    if counter == len(paths):
+        is_empty = True
+    return is_empty
