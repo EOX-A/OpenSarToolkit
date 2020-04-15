@@ -17,8 +17,8 @@ def mt_layover(
         filelist,
         outfile,
         temp_dir,
-        extend,
-        update_extend=False,
+        extent,
+        update_extent=False,
 ):
     # get the start time for Info on processing time
     start = time.time()
@@ -56,7 +56,7 @@ def mt_layover(
 
         ras.mask_by_shape(ls_layer,
                           outfile,
-                          vector=extend,
+                          vector=extent,
                           to_db=False,
                           datatype='uint8',
                           rescale=False,
@@ -66,29 +66,29 @@ def mt_layover(
         ls_layer.unlink()
         h.timer(start)
 
-        if update_extend:
+        if update_extent:
             # get some info
             burst_dir = Path(outfile).parent
             burst = burst_dir.name
-            extend = burst_dir.joinpath(f'{burst}.extend.gpkg')
+            extent = burst_dir.joinpath(f'{burst}.extent.gpkg')
 
             logger.info(
-                'Calculating symetrical difference of extend and ls_mask'
+                'Calculating symetrical difference of extent and ls_mask'
             )
 
             # polygonize the multi-temporal ls mask
             ras.polygonize_raster(outfile, f'{str(outfile)[:-4]}.gpkg')
 
-            # create file for masked extend
-            extend_ls_masked = burst_dir.joinpath(
-                f'{burst}.extend.masked.gpkg'
+            # create file for masked extent
+            extent_ls_masked = burst_dir.joinpath(
+                f'{burst}.extent.masked.gpkg'
             )
 
-            # calculate difference between burst extend
-            # and ls mask, for masked extend
+            # calculate difference between burst extent
+            # and ls mask, for masked extent
             try:
                 vec.difference(
-                    extend, f'{str(outfile)[:-4]}.gpkg', extend_ls_masked
+                    extent, f'{str(outfile)[:-4]}.gpkg', extent_ls_masked
                 )
             except:
-                shutil.copy(extend, extend_ls_masked)
+                shutil.copy(extent, extent_ls_masked)

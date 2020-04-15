@@ -115,7 +115,7 @@ def nan_percentile(arr, q):
     # loop over requested quantiles
     if type(q) is list:
         qs = []
-        qs.extend(q)
+        qs.extent(q)
     else:
         qs = [q]
     if len(qs) < 2:
@@ -166,11 +166,11 @@ def mt_metrics(
             else:
                 harmonics = True
                 metrics.remove('harmonics')
-                metrics.extend(['amplitude', 'phase', 'residuals'])
+                metrics.extent(['amplitude', 'phase', 'residuals'])
 
         if 'percentiles' in metrics:
             metrics.remove('percentiles')
-            metrics.extend(['p95', 'p5'])
+            metrics.extent(['p95', 'p5'])
 
         # get metadata
         meta = src.profile

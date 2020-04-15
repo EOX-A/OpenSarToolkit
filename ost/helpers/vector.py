@@ -223,7 +223,7 @@ def latlon_to_wkt(lat, lon, buffer_degree=None, buffer_meter=None, envelope=Fals
     representation by default.
 
     A buffer can be set in metres, which returns a WKT POLYGON. If envelope
-    is set to True, the buffer will be squared by the extend buffer radius.
+    is set to True, the buffer will be squared by the extent buffer radius.
 
     Args:
         lat (str): Latitude (deg) of a point

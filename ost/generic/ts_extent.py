@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 from ost.helpers import raster as ras, vector as vec
 
 
-def mt_extend(list_of_scenes,
+def mt_extent(list_of_scenes,
               out_file,
               temp_dir,
               buffer
@@ -16,7 +16,7 @@ def mt_extend(list_of_scenes,
     # build vrt stack from all scenes
     vrt_options = gdal.BuildVRTOptions(srcNodata=0, separate=True)
     gdal.BuildVRT(
-        str(out_dir.joinpath('extend.vrt')), list_of_scenes,
+        str(out_dir.joinpath('extent.vrt')), list_of_scenes,
         options=vrt_options
     )
     with TemporaryDirectory(prefix=f'{temp_dir}/') as temp:
@@ -25,7 +25,7 @@ def mt_extend(list_of_scenes,
         outline_file = Path(temp).joinpath(Path(out_file).name)
 
         # create outline
-        ras.outline(out_dir.joinpath('extend.vrt'), outline_file, 0, False)
+        ras.outline(out_dir.joinpath('extent.vrt'), outline_file, 0, False)
 
         # create exterior ring and write out
         vec.exterior(outline_file, out_file, buffer)

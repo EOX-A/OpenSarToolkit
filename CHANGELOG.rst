@@ -6,6 +6,10 @@ Changelog
 -----
 0.9.5
 -----
+* updated Timeseries and Timescan for the current GRD processing
+    * tests run only on 1 Product, TODO test on multiple
+    * TODO test on burst(s)
+* Timeseries extent.shp to extent.gpkg
 * godale for batch Download
 * added get_bursts_by_polygon in s1.burst_inventory function
 * added np_binary_erosion in helpers.raster function

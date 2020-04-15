@@ -6,7 +6,7 @@ import multiprocessing as mp
 from pathlib import Path
 
 from ost.helpers import raster as ras
-from ost.generic import ard_to_ts, ts_extend, ts_ls_mask, timescan, mosaic
+from ost.generic import ard_to_ts, ts_extent, ts_ls_mask, timescan, mosaic
 
 logger = logging.getLogger(__name__)
 
@@ -19,35 +19,35 @@ PRODUCT_LIST = [
 ]
 
 
-def _create_extends(burst_gdf, config_file):
+def _create_extents(burst_gdf, config_file):
 
     with open(config_file, 'r') as file:
         config_dict = json.load(file)['project']
         processing_dir = Path(config_dict['processing_dir'])
         temp_dir = Path(config_dict['temp_dir'])
 
-    # create extend iterable
+    # create extent iterable
     iter_list = []
     for burst in burst_gdf.bid.unique():  # ***
 
         # get the burst directory
         burst_dir = processing_dir.joinpath(burst)
 
-        # get common burst extend
+        # get common burst extent
         list_of_bursts = list(burst_dir.glob('**/*img'))
         list_of_bursts = [
             str(x) for x in list_of_bursts if 'layover' not in str(x)
         ]
-        extend = burst_dir.joinpath(f'{burst}.extend.gpkg')
+        extent = burst_dir.joinpath(f'{burst}.extent.gpkg')
 
         # if the file does not already exist, add to iterable
-        if not extend.exists():
-            iter_list.append([list_of_bursts, extend, temp_dir, -0.0018])
+        if not extent.exists():
+            iter_list.append([list_of_bursts, extent, temp_dir, -0.0018])
 
     # parallelizing on all cpus
     concurrent = mp.cpu_count()
     pool = mp.Pool(processes=concurrent)
-    pool.map(ts_extend.mt_extend, iter_list)
+    pool.map(ts_extent.mt_extent, iter_list)
 
 
 def _create_mt_ls_mask(burst_gdf, project_file):
@@ -72,11 +72,11 @@ def _create_mt_ls_mask(burst_gdf, project_file):
             str(x) for x in list_of_scenes if 'layover' in str(x)
             ]
 
-        # we need to redefine the namespace of the already created extends
-        extend = burst_dir.joinpath(f'{burst}.extend.gpkg')
-        if not extend.exists():
+        # we need to redefine the namespace of the already created extents
+        extent = burst_dir.joinpath(f'{burst}.extent.gpkg')
+        if not extent.exists():
             raise FileNotFoundError(
-                f'extend file for burst {burst} not found.'
+                f'extent file for burst {burst} not found.'
             )
 
         # layover/shadow mask
@@ -85,7 +85,7 @@ def _create_mt_ls_mask(burst_gdf, project_file):
         # if the file does not already exists, then put into list to process
         if not out_ls.exists():
             iter_list.append(
-                [list_of_layover, out_ls, temp_dir, str(extend),
+                [list_of_layover, out_ls, temp_dir, str(extent),
                  ard['apply_ls_mask']]
             )
 
@@ -160,10 +160,10 @@ def ards_to_timeseries(burst_gdf, project_file):
         ard_mt = ard_params['time-series_ARD']
 
 
-    # create all extends
-    _create_extends(burst_gdf, project_file)
+    # create all extents
+    _create_extents(burst_gdf, project_file)
 
-    # update extends in case of ls_mask
+    # update extents in case of ls_mask
     if ard['create_ls_mask'] or ard_mt['apply_ls_mask']:
         _create_mt_ls_mask(burst_gdf, project_file)
 
@@ -361,11 +361,11 @@ def mosaic_timescan(burst_inventory, project_file):
 
     if 'harmonics' in metrics:
         metrics.remove('harmonics')
-        metrics.extend(['amplitude', 'phase', 'residuals'])
+        metrics.extent(['amplitude', 'phase', 'residuals'])
 
     if 'percentiles' in metrics:
         metrics.remove('percentiles')
-        metrics.extend(['p95', 'p5'])
+        metrics.extent(['p95', 'p5'])
 
     tscan_dir = Path(processing_dir).joinpath('Mosaic/Timescan')
     tscan_dir.mkdir(parents=True, exist_ok=True)

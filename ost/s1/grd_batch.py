@@ -9,7 +9,7 @@ import gdal
 
 from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers import raster as ras
-from ost.generic import ts_extend
+from ost.generic import ts_extent
 from ost.generic import ts_ls_mask
 from ost.generic import ard_to_ts
 from ost.generic import timescan
@@ -162,13 +162,13 @@ def ards_to_timeseries(
 
         # get the burst directory
         track_dir = opj(processing_dir, track)
-        # get common burst extend
+        # get common burst extent
         list_of_scenes = glob.glob(opj(track_dir, '20*', '*data*', '*img'))
         list_of_scenes = [x for x in list_of_scenes if 'layover' not in x]
-        extend = opj(track_dir, '{}.extend.gpkg'.format(track))
-        logger.info('Creating common extend mask for track {}'.format(track))
-        ts_extend.mt_extend(list_of_scenes=list_of_scenes,
-                            out_file=extend,
+        extent = opj(track_dir, '{}.extent.gpkg'.format(track))
+        logger.info('Creating common extent mask for track {}'.format(track))
+        ts_extent.mt_extent(list_of_scenes=list_of_scenes,
+                            out_file=extent,
                             temp_dir=temp_dir,
                             buffer=-0.0018
                             )
@@ -194,7 +194,7 @@ def ards_to_timeseries(
                 ts_ls_mask.mt_layover(filelist=list_of_layover,
                                       outfile=out_ls,
                                       temp_dir=temp_dir,
-                                      extend=extend,
+                                      extent=extent,
                                       )
 
     for track in inventory_df.relativeorbit.unique():
@@ -374,11 +374,11 @@ def mosaic_timescan(inventory_df, processing_dir, temp_dir, proc_file,
 
     if 'harmonics' in metrics:
         metrics.remove('harmonics')
-        metrics.extend(['amplitude', 'phase', 'residuals'])
+        metrics.extent(['amplitude', 'phase', 'residuals'])
 
     if 'percentiles' in metrics:
             metrics.remove('percentiles')
-            metrics.extend(['p95', 'p5'])
+            metrics.extent(['p95', 'p5'])
 
     # create out directory of not existent
     tscan_dir = opj(processing_dir, 'Mosaic', 'Timescan')

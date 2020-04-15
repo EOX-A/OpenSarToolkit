@@ -37,14 +37,14 @@ def ard_to_ts(
         burst_dir = Path(processing_dir).joinpath(burst)
         # get timeseries directory and create if non existent
         out_dir = burst_dir.joinpath('Timeseries')
-        # extend
-        extend = burst_dir.joinpath(f'{burst}.extend.gpkg')
+        # extent
+        extent = burst_dir.joinpath(f'{burst}.extent.gpkg')
     else:
         # get the burst directory
         burst_dir = Path(processing_dir).joinpath(track)
         # get timeseries directory and create if non existent
         out_dir = burst_dir.joinpath('Timeseries')
-        extend = burst_dir.joinpath(f'{track}.extend.gpkg')
+        extent = burst_dir.joinpath(f'{track}.extent.gpkg')
 
     Path.mkdir(out_dir, parents=True, exist_ok=True)
     # in case some processing has been done before, check if already processed
@@ -172,7 +172,7 @@ def ard_to_ts(
                 ras.mask_by_shape(
                     infile,
                     outfile,
-                    extend,
+                    extent,
                     to_db=to_db,
                     datatype=ard_mt['dtype_output'],
                     min_value=mm_dict[stretch]['min'],
@@ -237,7 +237,7 @@ def ard_to_ts(
                 # run conversion routine
                 ras.mask_by_shape(infile,
                                   outfile=outfile,
-                                  vector=extend,
+                                  vector=extent,
                                   to_db=to_db,
                                   datatype=ard_mt['dtype_output'],
                                   min_value=mm_dict[stretch]['min'],
