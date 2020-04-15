@@ -364,47 +364,51 @@ def create_stack(filelist, out_stack, logfile,
 
 
 @retry(stop_max_attempt_number=3, wait_fixed=1)
-def mt_speckle_filter(in_stack, out_stack, logfile, speckle_dict,
-                      gpt_max_workers=os.cpu_count()):
-    #logger.info('Applying multi-temporal speckle filtering.')
-    # construct command string
-    command = ('{} Multi-Temporal-Speckle-Filter -x -q {}'
-               ' -PestimateENL={}'
-               ' -PanSize={}'
-               ' -PdampingFactor={}'
-               ' -Penl={}'
-               ' -Pfilter=\'{}\''
-               ' -PfilterSizeX={}'
-               ' -PfilterSizeY={}'
-               ' -PnumLooksStr={}'
-               ' -PsigmaStr={}'
-               ' -PtargetWindowSizeStr={}'
-               ' -PwindowSize={}'
-               ' -t \'{}\' \'{}\''.format(
-        GPT_FILE, 2 * gpt_max_workers,
-        speckle_dict['estimate_ENL'],
-        speckle_dict['pan_size'],
-        speckle_dict['damping'],
-        speckle_dict['ENL'],
-        speckle_dict['filter'],
-        speckle_dict['filter_x_size'],
-        speckle_dict['filter_y_size'],
-        speckle_dict['num_of_looks'],
-        speckle_dict['sigma'],
-        speckle_dict['target_window_size'],
-        speckle_dict['window_size'],
-        out_stack, in_stack
-    )
+def mt_speckle_filter(
+        in_stack,
+        out_stack,
+        logfile,
+        speckle_dict,
+        gpt_max_workers=os.cpu_count()
+):
+    logger.info('Applying multi-temporal speckle filtering.')
+    command = (
+        '{} Multi-Temporal-Speckle-Filter -x -q {}'
+        ' -PestimateENL={}'
+        ' -PanSize={}'
+        ' -PdampingFactor={}'
+        ' -Penl={}'
+        ' -Pfilter=\'{}\''
+        ' -PfilterSizeX={}'
+        ' -PfilterSizeY={}'
+        ' -PnumLooksStr={}'
+        ' -PsigmaStr={}'
+        ' -PtargetWindowSizeStr={}'
+        ' -PwindowSize={}'
+        ' -t \'{}\' \'{}\''.format(
+            GPT_FILE, 2 * gpt_max_workers,
+            speckle_dict['estimate_ENL'],
+            speckle_dict['pan_size'],
+            speckle_dict['damping'],
+            speckle_dict['ENL'],
+            speckle_dict['filter'],
+            speckle_dict['filter_x_size'],
+            speckle_dict['filter_y_size'],
+            speckle_dict['num_of_looks'],
+            speckle_dict['sigma'],
+            speckle_dict['target_window_size'],
+            speckle_dict['window_size'],
+            out_stack, in_stack
+        )
     )
 
     return_code = h.run_command(command, logfile)
 
     if return_code == 0:
         logger.info('Successfully applied multi-temporal speckle filtering')
+        return return_code
     else:
         raise GPTRuntimeError(
             'Multi-temporal Spackle Filter exited with an error {}. '
             'See {} for Snap Error output'.format(return_code, logfile)
         )
-
-    return return_code

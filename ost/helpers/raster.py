@@ -151,6 +151,8 @@ def scale_to_int(float_array, min_value, max_value, datatype):
         display_max = 255.
     elif datatype == 'uint16':
         display_max = 65535.
+    else:
+        display_max = 65535
 
     a = min_value - ((max_value - min_value) / (display_max - display_min))
     x = (max_value - min_value) / (display_max - 1)
@@ -182,12 +184,21 @@ def rescale_to_float(int_array, data_type_name):
     return np.add(np.multiply(int_array, a), b)
 
 
-def mask_by_shape(infile, outfile, shapefile, to_db=False, datatype='float32',
-                  rescale=True, min_value=0.000001, max_value=1, ndv=None,
-                  description=True):
+def mask_by_shape(
+        infile,
+        outfile,
+        vector,
+        to_db=False,
+        datatype='float32',
+        rescale=True,
+        min_value=0.000001,
+        max_value=1,
+        ndv=None,
+        description=True
+):
 
     # import shapefile geometries
-    with fiona.open(shapefile, 'r') as file:
+    with fiona.open(vector, 'r') as file:
         features = [feature['geometry'] for feature in file
                     if feature['geometry']]
 

@@ -1,5 +1,6 @@
 import os
 from os.path import join as opj
+import numpy as np
 import json
 import glob
 import itertools
@@ -8,7 +9,7 @@ import gdal
 
 from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers import raster as ras
-from ost.generic import ts_extent
+from ost.generic import ts_extend
 from ost.generic import ts_ls_mask
 from ost.generic import ard_to_ts
 from ost.generic import timescan
@@ -29,7 +30,6 @@ def _create_processing_dict(inventory_df):
     # get relative orbits and loop through each
     tracklist = inventory_df['relativeorbit'].unique()
     for track in tracklist:
-
         # initialize an empty list that will be filled by
         # list of scenes per acq. date
         all_ids = []
@@ -40,7 +40,6 @@ def _create_processing_dict(inventory_df):
 
         # loop through dates
         for acquisition_date in acquisition_dates:
-
             # get the scene ids per acquisition_date and write into a list
             single_id = []
             single_id.append(inventory_df['identifier'][
@@ -77,20 +76,46 @@ def grd_to_ard_batch(
             out_dir = opj(processing_dir, track, acquisition_date)
             os.makedirs(out_dir, exist_ok=True)
 
+            file_id = '{}_{}'.format(acquisition_date, track)
+            out_file = opj(out_dir, '{}_BS.dim'.format(file_id))
+            out_ls_mask = opj(out_dir, '{}_LS'.format(file_id))
+            tif_file = out_file.replace('.dim', '.tif')
+
             # check if already processed
             if os.path.isfile(opj(out_dir, '.processed')):
                 logger.info(
                     'Acquisition from {} of track {}'
                     ' already processed'.format(acquisition_date, track)
                 )
+                for i, row in inventory_df.iterrows():
+                    for s in list_of_scenes:
+                        if row.identifier == Sentinel1Scene(s).scene_id:
+                            if os.path.isfile(out_file):
+                                inventory_df.at[i, 'out_dimap'] = out_file
+                            else:
+                                inventory_df.at[i, 'out_dimap'] = None
+                            if os.path.isfile(out_ls_mask):
+                                inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
+                            else:
+                                inventory_df.at[i, 'out_ls_mask'] = None
+                            if to_tif and not os.path.isfile(tif_file) and \
+                                    os.path.isfile(out_file):
+                                tif_file = ard_to_rgb(infile=out_file,
+                                                      outfile=tif_file,
+                                                      driver='GTiff',
+                                                      to_db=True
+                                                      )
+                                inventory_df.at[i, 'out_tif'] = tif_file
+                            elif to_tif and os.path.isfile(tif_file):
+                                inventory_df.at[i, 'out_tif'] = tif_file
+                            else:
+                                inventory_df.at[i, 'out_tif'] = None
             else:
                 # get the paths to the file
                 scene_paths = ([
                     Sentinel1Scene(i).get_path(download_dir=download_dir)
                     for i in list_of_scenes
                 ])
-
-                file_id = '{}_{}'.format(acquisition_date, track)
 
                 # apply the grd_to_ard function
                 return_code, out_file, out_ls_mask = grd_to_ard(
@@ -104,7 +129,7 @@ def grd_to_ard_batch(
                     )
                 if to_tif:
                     tif_file = ard_to_rgb(infile=out_file,
-                                          outfile=out_file.replace('.dim', '.tif'),
+                                          outfile=tif_file,
                                           driver='GTiff',
                                           to_db=True
                                           )
@@ -132,39 +157,47 @@ def ards_to_timeseries(
         temp_dir,
         config_dict,
 ):
-    ard = config_dict['processing']['single ARD']
+    ard = config_dict['processing']['single_ARD']
     for track in inventory_df.relativeorbit.unique():
 
         # get the burst directory
         track_dir = opj(processing_dir, track)
-
-        # get common burst extent
+        # get common burst extend
         list_of_scenes = glob.glob(opj(track_dir, '20*', '*data*', '*img'))
         list_of_scenes = [x for x in list_of_scenes if 'layover' not in x]
-        extent = opj(track_dir, '{}.extent.shp'.format(track))
-        logger.info('Creating common extent mask for track {}'.format(track))
-        ts_extent.mt_extent(list_of_scenes, extent, temp_dir, -0.0018)
+        extend = opj(track_dir, '{}.extend.gpkg'.format(track))
+        logger.info('Creating common extend mask for track {}'.format(track))
+        ts_extend.mt_extend(list_of_scenes=list_of_scenes,
+                            out_file=extend,
+                            temp_dir=temp_dir,
+                            buffer=-0.0018
+                            )
 
-    if ard['create ls mask'] or ard['apply ls mask']:
-
+    if ard['create_ls_mask']:
         for track in inventory_df.relativeorbit.unique():
 
             # get the burst directory
             track_dir = opj(processing_dir, track)
+            list_of_layover = inventory_df['out_ls_mask'].to_list()
+            counter = 0
+            for e in list_of_layover:
+                if np.isnan(e):
+                    counter += 1
 
-            # get common burst extent
-            list_of_scenes = glob.glob(opj(track_dir, '20*', '*data*', '*img'))
-            list_of_layover = [x for x in list_of_scenes if 'layover' in x]
+            if counter == len(list_of_layover):
+                logger.debug('No layerover masks found skipping!')
+            else:
+                # layover/shadow mask
+                out_ls = opj(track_dir, '{}.ls_mask.tif'.format(track))
 
-            # layover/shadow mask
-            out_ls = opj(track_dir, '{}.ls_mask.tif'.format(track))
-
-            logger.info('Creating common Layover/Shadow mask for track {}'.format(track))
-            ts_extent.mt_layover(list_of_layover, out_ls, temp_dir,
-                                      extent, ard['apply ls mask'])
+                logger.info('Creating common Layover/Shadow mask for track {}'.format(track))
+                ts_ls_mask.mt_layover(filelist=list_of_layover,
+                                      outfile=out_ls,
+                                      temp_dir=temp_dir,
+                                      extend=extend,
+                                      )
 
     for track in inventory_df.relativeorbit.unique():
-
         # get the burst directory
         track_dir = opj(processing_dir, track)
 
@@ -173,42 +206,37 @@ def ards_to_timeseries(
             # see if there is actually any imagery in thi polarisation
             list_of_files = sorted(glob.glob(
                 opj(track_dir, '20*', '*data*', '*ma0*{}*img'.format(pol))))
-
-            if not len(list_of_files) > 1:
-                continue
-
             # create list of dims if polarisation is present
             list_of_dims = sorted(glob.glob(
-                opj(track_dir, '20*', '*bs*dim')))
-
+                opj(track_dir, '20*', '*BS*dim'))
+            )
+            if len(list_of_dims) == 0:
+                continue
             ard_to_ts.ard_to_ts(
                 list_of_files=list_of_dims,
-                product='bs',
+                product='BS'.lower(),
                 pol=pol,
-                config_dict=config_dict
+                config_dict=config_dict,
+                track=track
             )
 
 
 def timeseries_to_timescan(
         inventory_df,
         processing_dir,
-        proc_file,
-        exec_file=None
+        confic_dict,
 ):
     # load ard parameters
-    with open(proc_file, 'r') as ard_file:
-        ard_params = json.load(ard_file)['processing parameters']
-        ard = ard_params['single ARD']
-        ard_mt = ard_params['time-series ARD']
-        ard_tscan = ard_params['time-scan ARD']
-
+    ard = confic_dict['processing']['single_ARD']
+    ard_mt = confic_dict['processing']['time-series_ARD']
+    ard_tscan = confic_dict['processing']['time-scan_ARD']
 
     # get the db scaling right
-    to_db = ard['to db']
-    if ard['to db'] or ard_mt['to db']:
+    to_db = ard['to_db']
+    if ard['to_db'] or ard_mt['to_db']:
         to_db = True
 
-    dtype_conversion = True if ard_mt['dtype output'] != 'float32' else False
+    dtype_conversion = True if ard_mt['dtype_output'] != 'float32' else False
 
     for track in inventory_df.relativeorbit.unique():
 
@@ -221,16 +249,15 @@ def timeseries_to_timescan(
 
         # loop thorugh each polarization
         for polar in ['VV', 'VH', 'HH', 'HV']:
-
             if os.path.isfile(opj(timescan_dir, '.{}.processed'.format(polar))):
-                logger.info('Timescans for track {} already'
-                      ' processed.'.format(track))
+                logger.info(
+                    'Timescans for track {} already processed.'.format(track))
                 continue
 
-            #get timeseries vrt
+            # get timeseries vrt
             timeseries = opj(track_dir,
                              'Timeseries',
-                             'Timeseries.bs.{}.vrt'.format(polar)
+                             'Timeseries_bs_{}.vrt'.format(polar)
             )
 
             if not os.path.isfile(timeseries):
@@ -250,33 +277,24 @@ def timeseries_to_timescan(
             # define timescan prefix
             timescan_prefix = opj(timescan_dir, 'bs.{}'.format(polar))
 
-            # placeholder for parallel execution
-            if exec_file:
-                print(' Write command to a text file')
-                continue
-
             # run timescan
             timescan.mt_metrics(
-                timeseries,
-                timescan_prefix,
-                ard_tscan['metrics'],
+                stack=timeseries,
+                out_prefix=timescan_prefix,
+                metrics=ard_tscan['metrics'],
                 rescale_to_datatype=dtype_conversion,
-                to_power=to_db,
-                outlier_removal=ard_tscan['remove outliers'],
+                to_power=False,
+                outlier_removal=ard_tscan['remove_outliers'],
                 datelist=datelist
             )
 
-        if not exec_file:
-            # create vrt file (and rename )
-            ras.create_tscan_vrt(timescan_dir, proc_file)
 
-
-def mosaic_timeseries(inventory_df, processing_dir, temp_dir, cut_to_aoi=False,
-                      exec_file=None):
-
-    print(' -----------------------------------')
+def mosaic_timeseries(
+        inventory_df,
+        processing_dir,
+        config_dict,
+):
     logger.info('Mosaicking Time-series layers')
-    print(' -----------------------------------')
 
     # create output folder
     ts_dir = opj(processing_dir, 'Mosaic', 'Timeseries')
@@ -284,60 +302,65 @@ def mosaic_timeseries(inventory_df, processing_dir, temp_dir, cut_to_aoi=False,
 
     # loop through polarisations
     for p in ['VV', 'VH', 'HH', 'HV']:
-
         tracks = inventory_df.relativeorbit.unique()
         nr_of_ts = len(glob.glob(opj(
-            processing_dir, tracks[0], 'Timeseries', '*.{}.tif'.format(p))))
-
-        if not nr_of_ts >= 1:
+            processing_dir, tracks[0], 'Timeseries', '*_{}.tif'.format(p)))
+        )
+        if nr_of_ts == 0:
             continue
 
         outfiles = []
         for i in range(1, nr_of_ts + 1):
-
             filelist = glob.glob(opj(
                 processing_dir, '*', 'Timeseries',
-                '{}.*.{}.tif'.format(i, p)))
+                '{:02d}_*_{}.tif'.format(i, p)
+            ))
             filelist = [file for file in filelist if 'Mosaic' not in file]
 
+            logger.info(opj(
+                processing_dir, '*', 'Timeseries',
+                '{}_*_{}.tif'.format(i, p)
+            ))
             # create
             datelist = []
             for file in filelist:
-                datelist.append(os.path.basename(file).split('.')[1])
+                datelist.append(os.path.basename(file).split('_')[1])
 
             filelist = ' '.join(filelist)
-            start, end = sorted(datelist)[0], sorted(datelist)[-1]
+            if nr_of_ts > 1:
+                start, end = sorted(datelist)[0], sorted(datelist)[-1]
+            elif nr_of_ts == 1:
+                start, end = sorted(datelist)[0], sorted(datelist)[0]
+            else:
+                break
 
             if start == end:
-                outfile = opj(ts_dir, '{}.{}.bs.{}.tif'.format(i, start, p))
+                outfile = opj(ts_dir, '{}_{}_bs_{}.tif'.format(i, start, p))
             else:
-                outfile = opj(ts_dir, '{}.{}-{}.bs.{}.tif'.format(i, start, end, p))
+                outfile = opj(ts_dir, '{}.{}-{}_bs_{}.tif'.format(i, start, end, p))
 
             check_file = opj(
                 os.path.dirname(outfile),
                 '.{}.processed'.format(os.path.basename(outfile)[:-4])
             )
-               # logfile = opj(ts_dir, '{}.{}-{}.bs.{}.errLog'.format(i, start, end, p))
 
             outfiles.append(outfile)
 
             if os.path.isfile(check_file):
-                logger.info('Mosaic layer {} already'
-                      ' processed.'.format(os.path.basename(outfile)))
+                logger.info(
+                    'Mosaic layer {} already processed.'.format(os.path.basename(outfile))
+                )
                 continue
 
             logger.info('Mosaicking layer {}.'.format(os.path.basename(outfile)))
-            mosaic.mosaic(filelist, outfile, temp_dir, cut_to_aoi)
-
-        if exec_file:
-            print(' gdalbuildvrt ....command, outfiles')
-            continue
+            mosaic.mosaic(filelist, outfile, config_dict)
 
         # create vrt
         vrt_options = gdal.BuildVRTOptions(srcNodata=0, separate=True)
-        gdal.BuildVRT(opj(ts_dir, 'Timeseries.{}.vrt'.format(p)),
-                      outfiles,
-                      options=vrt_options
+        gdal.BuildVRT(
+            opj(ts_dir, 'Timeseries_{}.vrt'.format(p)),
+            outfiles,
+            options=vrt_options
         )
 
 

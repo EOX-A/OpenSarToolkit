@@ -22,22 +22,19 @@ def create_timeseries_mosaic_vrt(list_of_args):
     )
 
 
-def mosaic(list_of_args):
-    # unpack list of args
-    filelist, outfile, project_file = list_of_args
+def mosaic(filelist, outfile, config_dict):
 
-    with open(project_file, 'r') as ard_file:
-        project_params = json.load(ard_file)
-        temp_dir = project_params['project']['temp_dir']
-        aoi = project_params['project']['aoi']
-        cut_to_aoi = project_params['processing']['mosaic']['cut_to_aoi']
+    temp_dir = config_dict['temp_dir']
+    aoi = config_dict['aoi']
+    cut_to_aoi = config_dict['processing']['mosaic']['cut_to_aoi']
+
+    outfile = Path(outfile)
 
     logfile = outfile.parent.joinpath(f'{str((outfile))[:-4]}.errLog')
 
     with TemporaryDirectory(prefix=f'{temp_dir}/') as temp:
 
         temp = Path(temp)
-
         # get datatype from first image in our mosaic filelist
         with rasterio.open(filelist.split(' ')[0]) as src:
             dtype = src.meta['dtype']

@@ -52,7 +52,7 @@
             "dtype_output": "float32"
         },
         "time-scan_ARD": {
-            "metrics": ["avg", "max", "min", "std", "cov"],
+            "metrics": ["avg", "max", "min", "std", "cov", "count"],
             "remove_outliers": true
         }
     }

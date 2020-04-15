@@ -1,4 +1,4 @@
-import json
+import os
 import logging
 import gdal
 from pathlib import Path
@@ -13,39 +13,51 @@ logger = logging.getLogger(__name__)
 
 def ard_to_ts(
         list_of_files,
-        burst,
         product,
         pol,
-        config_dict
+        config_dict,
+        burst=None,
+        track=None,
 ):
-    # -------------------------------------------
-    # convert list of files readable for snap
-    list_of_files = f"\'{','.join(str(x) for x in list_of_files)}\'"
+    product_count = len(list_of_files)
 
     # -------------------------------------------
     # 2 read config dict
-    processing_dir = config_dict['project']['processing_dir']
-    temp_dir = config_dict['project']['temp_dir']
-    cpus_per_process = config_dict['project']['cpus_per_process']
+    processing_dir = config_dict['processing_dir']
+    temp_dir = config_dict['temp_dir']
+    gpt_max_workers = config_dict['gpt_max_workers']
     ard_params = config_dict['processing']
-    ard = config_dict['single_ARD']
-    ard_mt = config_dict['time-series_ARD']
+    ard = ard_params['single_ARD']
+    ard_mt = ard_params['time-series_ARD']
 
     # -------------------------------------------
     # 3 get namespace of directories and check if already processed
-    # get the burst directory
-    burst_dir = Path(processing_dir).joinpath(burst)
+    if burst is not None:
+        # get the burst directory
+        burst_dir = Path(processing_dir).joinpath(burst)
+        # get timeseries directory and create if non existent
+        out_dir = burst_dir.joinpath('Timeseries')
+        # extend
+        extend = burst_dir.joinpath(f'{burst}.extend.gpkg')
+    else:
+        # get the burst directory
+        burst_dir = Path(processing_dir).joinpath(track)
+        # get timeseries directory and create if non existent
+        out_dir = burst_dir.joinpath('Timeseries')
+        extend = burst_dir.joinpath(f'{track}.extend.gpkg')
 
-    # get timeseries directory and create if non existent
-    out_dir = burst_dir.joinpath('Timeseries')
     Path.mkdir(out_dir, parents=True, exist_ok=True)
-
     # in case some processing has been done before, check if already processed
     check_file = out_dir.joinpath(f'.{product}.{pol}.processed')
-    if Path.exists(check_file):
-        logger.info(f'Timeseries of {burst} for {product} in {pol} '
-                    f'polarisation already processed.')
-        return
+    out_vrt = out_dir.joinpath(f'Timeseries_{product}_{pol}.vrt')
+    if Path.exists(check_file) and Path.exists(Path(out_vrt)):
+        if burst is None:
+            burst = track
+        logger.info(
+            f'Timeseries of {burst} for {product} in {pol} '
+            f'polarisation already processed.'
+        )
+        return out_vrt, out_dir
 
     # -------------------------------------------
     # 4 adjust processing parameters according to config
@@ -57,57 +69,56 @@ def ard_to_ts(
     else:
         to_db = ard_mt['to_db']
         logger.debug(f'Converting to dB for {product}')
-
-    if ard_mt['apply_ls_mask']:
-        extent = burst_dir.joinpath(f'{burst}.extent.masked.gpkg')
-    else:
-        extent = burst_dir.joinpath(f'{burst}.extent.gpkg')
-
     # -------------------------------------------
     # 5 SNAP processing
     with TemporaryDirectory(prefix=f'{temp_dir}/') as temp:
-
         # turn to Path object
         temp = Path(temp)
-
         # create namespaces
         temp_stack = temp.joinpath(f'{burst}_{product}_{pol}')
         out_stack = temp.joinpath(f'{burst}_{product}_{pol}_mt')
         stack_log = out_dir.joinpath(f'{burst}_{product}_{pol}_stack.err_log')
 
-        # run stacking routine
-        if pol in ['Alpha', 'Anisotropy', 'Entropy']:
-            logger.info(
-                f'Creating multi-temporal stack of images of burst/track '
-                f'{burst} for the {pol} band of the polarimetric '
-                f'H-A-Alpha decomposition.'
-            )
-            create_stack(list_of_files, temp_stack, stack_log, pattern=pol)
-        else:
-            logger.info(
-                f'Creating multi-temporal stack of images of burst/track '
-                f'{burst} for {product} product in {pol} polarization.'
-            )
-            create_stack(
-                list_of_files, temp_stack, stack_log, polarisation=pol
-            )
+        if product_count > 2:
+            # -------------------------------------------
+            # convert list of files readable for snap
+            list_of_files = f"\'{','.join(str(x) for x in list_of_files)}\'"
 
-        # run mt speckle filter
-        if ard_mt['remove_mt_speckle'] is True:
-            ard_mt_speck = ard_params['time-series_ARD']['mt_speckle_filter']
-            speckle_log = out_dir.joinpath(
-                f'{burst}_{product}_{pol}_mt_speckle.err_log'
-            )
+            # run stacking routine
+            if pol in ['Alpha', 'Anisotropy', 'Entropy']:
+                logger.info(
+                    f'Creating multi-temporal stack of images of burst/track '
+                    f'{burst} for the {pol} band of the polarimetric '
+                    f'H-A-Alpha decomposition.'
+                )
+                create_stack(list_of_files, temp_stack, stack_log, pattern=pol)
+            else:
+                logger.info(
+                    f'Creating multi-temporal stack of images of burst/track '
+                    f'{burst} for {product} product in {pol} polarization.'
+                )
+                create_stack(
+                    list_of_files, temp_stack, stack_log, polarisation=pol
+                )
 
-            logger.info('Applying multi-temporal speckle filter')
-            mt_speckle_filter(
-                f'{temp_stack}.dim', out_stack, speckle_log,
-                speckle_dict=ard_mt_speck, ncores=cpus_per_process
-            )
-            # remove tmp files
-            h.delete_dimap(temp_stack)
+            # run mt speckle filter
+            if ard_mt['remove_mt_speckle'] is True:
+                ard_mt_speck = ard_params['time-series_ARD']['mt_speckle_filter']
+                speckle_log = out_dir.joinpath(
+                    f'{burst}_{product}_{pol}_mt_speckle.err_log'
+                )
+
+                logger.info('Applying multi-temporal speckle filter')
+                mt_speckle_filter(
+                    f'{temp_stack}.dim', out_stack, speckle_log,
+                    speckle_dict=ard_mt_speck, gpt_max_workers=gpt_max_workers
+                )
+                # remove tmp files
+                h.delete_dimap(temp_stack)
+            else:
+                out_stack = temp_stack
         else:
-            out_stack = temp_stack
+            out_stack = list_of_files[0]
 
         # -----------------------------------------------
         # 6 Conversion to GeoTiff
@@ -122,7 +133,6 @@ def ard_to_ts(
         stretch = pol if pol in ['Alpha', 'Anisotropy', 'Entropy'] else product
 
         if product == 'coh':
-
             # get slave and master dates from file names and sort them
             mst_dates = sorted([
                 dt.strptime(file.name.split('_')[3].split('.')[0], '%d%b%Y')
@@ -160,48 +170,80 @@ def ard_to_ts(
                 # produce final outputfile,
                 # including dtype conversion and ls mask
                 ras.mask_by_shape(
-                    infile, outfile, extent, to_db=to_db,
+                    infile,
+                    outfile,
+                    extend,
+                    to_db=to_db,
                     datatype=ard_mt['dtype_output'],
                     min_value=mm_dict[stretch]['min'],
                     max_value=mm_dict[stretch]['max'],
-                    ndv=0.0, description=True)
+                    ndv=0.0,
+                    description=True
+                )
 
                 # add ot a list for subsequent vrt creation
                 outfiles.append(str(outfile))
 
         else:
-            # get the dates of the files
-            dates = sorted([dt.strptime(
-                file.name.split('_')[-1][:-4], '%d%b%Y')
-                for file in list(out_stack.with_suffix('.data').glob('*.img'))
-            ])
+            if product_count > 1:
+                # get the dates of the files
+                dates = sorted([dt.strptime(
+                    file.name.split('_')[-1][:-4], '%d%b%Y')
+                    for file in list(Path(out_stack).with_suffix('.data').glob('*.img'))
+                ])
+            else:
+                dates = [dt.strptime(
+                    Path(out_stack).with_suffix('.data').name.split('_')[0],
+                    '%Y%m%d'
+                )]
 
             # write them back to string for following loop
             dates = [dt.strftime(ts, "%d%b%Y") for ts in dates]
-
             outfiles = []
             for i, date in enumerate(dates):
 
                 # re-construct namespace for input file
-                infile = list(
-                    out_stack.with_suffix('.data').glob(f'*{pol}*{date}*img')
-                )[0]
+                if product_count > 1:
+                    infile = list(
+                        out_stack.with_suffix('.data').glob(f'*{pol}*{date}*img')
+                    )[0]
+                    if not os.path.isfile(infile):
+                        logger.debug(
+                            '%s ARD does not exist next date in Timeseries', date
+                        )
+                        continue
+                else:
+                    all_pols = list(
+                        Path(out_stack).with_suffix('.data').glob('*img')
+                    )
+                    infile = ''.join([str(e) for e in all_pols if pol in str(e)])
+                    if not os.path.isfile(infile):
+                        logger.debug(
+                            '%s ARD does not exist next date in Timeseries', date
+                        )
+                        return None
 
                 # restructure date to YYMMDD
-                date = dt.strftime(dt.strptime(date, '%d%b%Y'), '%y%m%d')
+                if product_count > 1:
+                    date = dt.strftime(dt.strptime(date, '%d%b%Y'), '%Y%m%d')
+                else:
+                    date = dt.strftime(dt.strptime(date, '%d%b%Y'), '%Y%m%d')
 
                 # create namespace for output file
                 outfile = out_dir.joinpath(
-                    f'{i+1:02d}.{date}.{product}.{pol}.tif'
+                    f'{i+1:02d}_{date}_{product}_{pol}.tif'
                 )
 
                 # run conversion routine
-                ras.mask_by_shape(infile, outfile, extent,
+                ras.mask_by_shape(infile,
+                                  outfile=outfile,
+                                  vector=extend,
                                   to_db=to_db,
                                   datatype=ard_mt['dtype_output'],
                                   min_value=mm_dict[stretch]['min'],
                                   max_value=mm_dict[stretch]['max'],
-                                  ndv=0.0)
+                                  ndv=0.0
+                                  )
 
                 # add ot a list for subsequent vrt creation
                 outfiles.append(str(outfile))
@@ -222,7 +264,8 @@ def ard_to_ts(
     # 8 Create vrts
     vrt_options = gdal.BuildVRTOptions(srcNodata=0, separate=True)
     gdal.BuildVRT(
-        str(out_dir.joinpath(f'Timeseries.{product}.{pol}.vrt')),
+        str(out_vrt),
         outfiles,
         options=vrt_options
     )
+    return out_vrt, out_dir

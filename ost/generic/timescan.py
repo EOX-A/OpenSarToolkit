@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-# import stdlib modules
-
 import logging
 import warnings
 from pathlib import Path
@@ -135,7 +132,8 @@ def nan_percentile(arr, q):
         c_arr = np.ceil(k_arr).astype(np.int32)
         fc_equal_k_mask = f_arr == c_arr
 
-        # linear interpolation (like numpy percentile) takes the fractional part of desired position
+        # linear interpolation (like numpy percentile)
+        # takes the fractional part of desired position
         floor_val = _zvalue_from_index(arr=arr, ind=f_arr) * (c_arr - k_arr)
         ceil_val = _zvalue_from_index(arr=arr, ind=c_arr) * (k_arr - f_arr)
 
@@ -147,20 +145,24 @@ def nan_percentile(arr, q):
     return result
 
 
-def mt_metrics(list_of_args):
-    # -------------------------------------
-    # 1 extract args
-    stack, out_prefix, metrics, rescale_to_datatype = list_of_args[:4]
-    to_power, outlier_removal, datelist = list_of_args[4:]
+def mt_metrics(
+        stack,
+        out_prefix,
+        metrics=["avg", "cov"],
+        datelist=None,
+        rescale_to_datatype=False,
+        to_power=False,
+        outlier_removal=False,
 
+):
     with rasterio.open(stack) as src:
-
         harmonics = False
         if 'harmonics' in metrics:
             logger.info('Calculating harmonics')
             if not datelist:
-                print(
-                    ' WARNING: Harmonics need the datelist. Harmonics will not be calculated')
+                logger.warning(
+                    'Harmonics need the datelist. Harmonics will not be calculated'
+                )
             else:
                 harmonics = True
                 metrics.remove('harmonics')
@@ -184,10 +186,24 @@ def mt_metrics(list_of_args):
             metric_dict[metric] = rasterio.open(filename, 'w', **meta)
 
         # scaling factors in case we have to rescale to integer
-        minimums = {'avg': int(-30), 'max': int(-30), 'min': int(-30),
-                    'std': 0.00001, 'cov': 0.00001, 'phase': -np.pi}
-        maximums = {'avg': 5, 'max': 5, 'min': 5, 'std': 1, 'cov': 1,
-                    'phase': np.pi}
+        minimums = {
+            'avg': int(-30),
+            'max': int(-30),
+            'min': int(-30),
+            'std': 0.00001,
+            'cov': 0.00001,
+            'phase': -np.pi,
+            'count': 0
+        }
+        maximums = {
+            'avg': 5,
+            'max': 5,
+            'min': 5,
+            'std': 1,
+            'cov': 1,
+            'phase': np.pi,
+            'count': 2147483647
+        }
 
         if harmonics:
             # construct independent variables
@@ -217,12 +233,11 @@ def mt_metrics(list_of_args):
 
             # transform to power
             if to_power is True:
-                stack = np.power(10, np.divide(stack, 10))
+                stack = np.where(stack != 0, np.power(10, np.divide(stack, 10)), np.nan)
 
             # outlier removal (only applies if there are more than 5 bands)
             if outlier_removal is True and src.count >= 5:
                 stack = remove_outliers(stack)
-
             # get stats
             arr = {'p95': (nan_percentile(stack, [95, 5])
                            if 'p95' in metrics else (False, False))[0],
@@ -239,10 +254,12 @@ def mt_metrics(list_of_args):
                    'std': (np.nanstd(stack, axis=0)
                            if 'std' in metrics else False),
                    'cov': (stats.variation(stack, axis=0, nan_policy='omit')
-                           if 'cov' in metrics else False)}
+                           if 'cov' in metrics else False),
+                   'count': (np.nan_to_num(np.count_nonzero(stack, axis=0))
+                             if 'count' in metrics else False)
+                   }
 
             if harmonics:
-
                 stack_size = (stack.shape[1], stack.shape[2])
                 if to_power is True:
                     y = ras.convert_to_db(stack).reshape(stack.shape[0], -1)
@@ -260,7 +277,6 @@ def mt_metrics(list_of_args):
 
             # do the back conversions and write to disk loop
             for metric in metrics:
-
                 if to_power is True and metric in metrics_to_convert:
                     arr[metric] = ras.convert_to_db(arr[metric])
 
@@ -274,7 +290,7 @@ def mt_metrics(list_of_args):
 
                 # write to dest
                 metric_dict[metric].write(
-                    np.nan_to_num(arr[metric]).astype(meta['dtype']),
+                    arr[metric].astype(meta['dtype']),
                     window=window, indexes=1
                 )
                 metric_dict[metric].update_tags(
@@ -293,11 +309,8 @@ def mt_metrics(list_of_args):
         return_code = h.check_out_tiff(filename)
         if return_code != 0:
             # remove all files and return
-            #for metric in metrics:
             filename = f'{str(out_prefix)}.{metric}.tif'
             Path(filename).unlink()
-            # Path(f'{filename}.xml').unlink()
-            
             return return_code
         
     if return_code == 0:

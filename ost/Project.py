@@ -358,12 +358,9 @@ class Sentinel1(Generic):
             complete_coverage=complete_coverage)
 
         # summing up information
-        print('--------------------------------------------')
-        print(' Summing up the info about mosaics')
-        print('--------------------------------------------')
+        logger.info(' Summing up the info about mosaics')
         for key in self.refined_inventory_dict:
-            print('')
-            print(f' {self.coverages[key]} mosaics for mosaic key {key}')
+            logger.info(f' {self.coverages[key]} mosaics for mosaic key {key}')
 
     def download(self, inventory_df, mirror=None, concurrent=2,
                  uname=None, pword=None):
@@ -617,6 +614,59 @@ class Sentinel1Batch(Sentinel1):
         # update ard_parameters
         self.ard_parameters['single_ARD']['dem'] = dem_dict
 
+    def grds_to_ard(
+            self,
+            timeseries=False,
+            timescan=False,
+            mosaic=False,
+            overwrite=False,
+            cut_to_aoi=False,
+            to_tif=False,
+    ):
+        self.update_ard_parameters()
+
+        if overwrite:
+            logger.info('Deleting processing folder to start from scratch')
+            h.remove_folder_content(self.processing_dir)
+
+        # the grd to ard batch routine
+        self.inventory = grd_batch.grd_to_ard_batch(
+            inventory_df=self.inventory,
+            download_dir=self.download_dir,
+            processing_dir=self.processing_dir,
+            temp_dir=self.temp_dir,
+            config_dict=self.config_dict,
+            subset=self.aoi,
+            to_tif=to_tif,
+            )
+
+        # time-series part
+        if timeseries or timescan:
+            # check and retry function
+            grd_batch.ards_to_timeseries(self.inventory,
+                                         self.processing_dir,
+                                         self.temp_dir,
+                                         self.config_dict,
+                                         )
+
+        if timescan:
+            # number of expected timescans
+            grd_batch.timeseries_to_timescan(
+                self.inventory,
+                self.processing_dir,
+                self.config_dict
+            )
+
+        if cut_to_aoi:
+            cut_to_aoi = self.aoi
+
+        if mosaic and timeseries:
+            grd_batch.mosaic_timeseries(
+                self.inventory,
+                self.processing_dir,
+                self.config_dict,
+            )
+
     def bursts_to_ards(
             self,
             timeseries=False,
@@ -718,62 +768,12 @@ class Sentinel1Batch(Sentinel1):
             add_dates=False,
             prefix=False
     ):
-        ras.create_timeseries_animation(timeseries_dir, product_list, outfile,
+        ras.create_timeseries_animation(timeseries_dir,
+                                        product_list,
+                                        outfile,
                                         shrink_factor=shrink_factor,
                                         duration=duration,
                                         resampling_factor=resampling_factor,
-                                        add_dates=add_dates, prefix=prefix)
-
-    def grds_to_ard(
-            self,
-            timeseries=False,
-            timescan=False,
-            mosaic=False,
-            overwrite=False,
-            cut_to_aoi=False,
-            to_tif=False,
-    ):
-        self.update_ard_parameters()
-
-        if overwrite:
-            logger.info('Deleting processing folder to start from scratch')
-            h.remove_folder_content(self.processing_dir)
-
-        # the grd to ard batch routine
-        self.inventory = grd_batch.grd_to_ard_batch(
-            inventory_df=self.inventory,
-            download_dir=self.download_dir,
-            processing_dir=self.processing_dir,
-            temp_dir=self.temp_dir,
-            config_dict=self.config_dict,
-            subset=self.aoi,
-            to_tif=to_tif,
-            )
-
-        # time-series part
-        if timeseries or timescan:
-            # check and retry function
-            grd_batch.ards_to_timeseries(self.inventory,
-                                         self.processing_dir,
-                                         self.temp_dir,
-                                         self.config_dict,
-                                         )
-
-        if timescan:
-            # number of expected timescans
-            grd_batch.timeseries_to_timescan(
-                self.inventory,
-                self.processing_dir,
-                self.config_dict
-            )
-
-        if cut_to_aoi:
-            cut_to_aoi = self.aoi
-
-        if mosaic and timeseries:
-            grd_batch.mosaic_timeseries(
-                self.inventory,
-                self.processing_dir,
-                self.temp_dir,
-                cut_to_aoi
-            )
+                                        add_dates=add_dates,
+                                        prefix=prefix
+                                        )

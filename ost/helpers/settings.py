@@ -267,7 +267,7 @@ CONFIG_CHECK = dict({
     'dtype_output': {'type': str, 'choices': ['float32', 'uint8', 'uint16']},
     'metrics': {'type': list, 'choices':
         ['median', 'percentiles', 'harmonics',
-         'avg', 'max', 'min', 'std', 'cov']
+         'avg', 'max', 'min', 'std', 'cov', 'count']
                 },
     'remove_outliers': {'type': bool},
     'cut_to_aoi': {'type': bool}
