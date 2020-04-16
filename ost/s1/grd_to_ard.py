@@ -210,7 +210,7 @@ def grd_to_ard(filelist,
     
     # ---------------------------------------------------------------------
     # 5 Layover shadow mask
-    if ard['create_ls_mask'] is True:
+    if ard['create_ls_mask']:
         ls_mask = opj(temp_dir, '{}.ls_mask'.format(file_id))
         logfile = opj(output_dir, '{}.ls_mask.errLog'.format(file_id))
         return_code = common.ls_mask(
@@ -227,13 +227,6 @@ def grd_to_ard(filelist,
                 'Something went wrong with ls_mask {}'.format(return_code)
             )
 
-        # last check on ls data
-        # return_code = h.check_out_dimap(ls_mask, test_stats=False)
-        # if return_code != 0:
-        #     h.delete_dimap(ls_mask)
-        #     raise GPTRuntimeError(
-        #         'Something went wrong with ls_mask {}'.format(return_code)
-        #     )
         # move to final destination
         out_ls_mask = opj(output_dir, '{}_LS'.format(file_id))
 
@@ -266,7 +259,9 @@ def grd_to_ard(filelist,
         # delete output if command failed for some reason and return
         if return_code != 0:
             h.delete_dimap(filtered)
-            raise GPTRuntimeError('Something went wrong when applying single scene speckle filter')
+            raise GPTRuntimeError(
+                'Something went wrong when applying single scene speckle filter'
+            )
        
         # define input for next step
         infile = '{}.dim'.format(filtered)
@@ -358,9 +353,9 @@ def grd_to_ard(filelist,
         file.write('passed all tests \n')
 
     # Return colected files that have been processed
-    if ard['create_ls_mask'] is True:
+    if ard['create_ls_mask']:
         out_final_ls_mask = out_ls_mask + '.dim'
-        out_ls_mask = ls_to_vector(infile=out_ls_mask, driver='GPKG')
+        out_ls_mask = ls_to_vector(infile=out_final_ls_mask, driver='GPKG')
         if out_ls_mask is None:
             h.delete_dimap(out_final_ls_mask.replace('.dim', ''))
     else:

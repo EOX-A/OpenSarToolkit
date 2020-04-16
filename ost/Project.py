@@ -620,7 +620,6 @@ class Sentinel1Batch(Sentinel1):
             timescan=False,
             mosaic=False,
             overwrite=False,
-            cut_to_aoi=False,
             to_tif=False,
     ):
         self.update_ard_parameters()
@@ -658,7 +657,7 @@ class Sentinel1Batch(Sentinel1):
             )
 
         if mosaic and timeseries:
-            raise NotImplementedError
+            raise Warning('Currently not availible, ver. 0.9.6 goal')
             grd_batch.mosaic_timeseries(
                 self.inventory,
                 self.processing_dir,
@@ -671,9 +670,9 @@ class Sentinel1Batch(Sentinel1):
             timescan=False,
             mosaic=False,
             overwrite=False,
-            max_workers=1
+            max_workers=None
     ):
-        if self.godale_max_workers:
+        if self.godale_max_workers and max_workers is None:
             max_workers = self.godale_max_workers
 
         # --------------------------------------------
@@ -739,7 +738,7 @@ class Sentinel1Batch(Sentinel1):
         # --------------------------------------------
         # 8 mosaic the time-series
         if mosaic and timeseries:
-            raise NotImplementedError
+            raise Warning('Currently not availible, ver. 0.9.6 goal')
             burst_ts.mosaic_timeseries(
                 burst_gdf=self.burst_inventory,
                 config_dict=self.config_dict,

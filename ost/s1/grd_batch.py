@@ -79,7 +79,7 @@ def grd_to_ard_batch(
 
             file_id = '{}_{}'.format(acquisition_date, track)
             out_file = opj(out_dir, '{}_BS.dim'.format(file_id))
-            out_ls_mask = opj(out_dir, '{}_LS'.format(file_id))
+            out_ls_mask = opj(out_dir, '{}_LS.gpkg'.format(file_id))
             tif_file = out_file.replace('.dim', '.tif')
 
             # check if already processed
@@ -88,17 +88,19 @@ def grd_to_ard_batch(
                     'Acquisition from {} of track {}'
                     ' already processed'.format(acquisition_date, track)
                 )
-                for i, row in inventory_df.iterrows():
-                    for s in list_of_scenes:
+                for s in list_of_scenes:
+                    for i, row in inventory_df.iterrows():
                         if row.identifier == Sentinel1Scene(s).scene_id:
                             if os.path.isfile(out_file):
                                 inventory_df.at[i, 'out_dimap'] = out_file
                             else:
                                 inventory_df.at[i, 'out_dimap'] = None
+
                             if os.path.isfile(out_ls_mask):
                                 inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
                             else:
                                 inventory_df.at[i, 'out_ls_mask'] = None
+
                             if to_tif and not os.path.isfile(tif_file) and \
                                     os.path.isfile(out_file):
                                 tif_file = ard_to_rgb(infile=out_file,

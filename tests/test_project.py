@@ -22,7 +22,6 @@ def test_grds_to_ards(grd_project_class):
                 mosaic=False,
                 overwrite=True,
                 to_tif=True,
-                cut_to_aoi=False
             )
 
 

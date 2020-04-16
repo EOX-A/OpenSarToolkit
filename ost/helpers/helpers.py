@@ -129,7 +129,7 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
 
     return_code = process.returncode
 
-    if return_code != 0 and logfile is not None and not silent:
+    if return_code != 0 and logfile is not None:
         with open(str(logfile), 'w') as file:
             for line in process.stderr.decode().splitlines():
                 file.write('{}\n'.format(line))

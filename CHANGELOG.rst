@@ -8,6 +8,7 @@ Changelog
 -----
 * restored GRD processing
 * Project GRD and burst processing goes up to (including) Timescans
+    * Mosaic creation currently under construction and will raise Warning if triggered in the project
 * changed retrying module to retry
     * reason: could find how to get log/error output of retrying module
     * Conda installation is far away
@@ -18,7 +19,8 @@ Changelog
 * godale for batch Download
 * added get_bursts_by_polygon in s1.burst_inventory function
 * added np_binary_erosion in helpers.raster function
-* added Depre. Warning to PEPS and ONDA, scihub and ASF as default search and dl
+* added Depre. Warning to PEPS and ONDA, curently not availible
+* scihub and ASF as default search and dl
 * added a DownloadError as general custom DL error
 * added SLC processing to the Sentinel1Scene class
     * also added a test for it
