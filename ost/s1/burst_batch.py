@@ -30,13 +30,14 @@ def bursts_to_ards(
     # we update max_workers in case we have less gpt_max_workers
     # then cpus available
     if max_workers > os.cpu_count():
-        max_workers = int(os.cpu_count()/2)
+        max_workers = os.cpu_count()
     if max_workers == 1 or len(burst_gdf) == 1:
         config_dict['gpt_max_workers'] = os.cpu_count()
     elif max_workers <= os.cpu_count():
         config_dict['gpt_max_workers'] = int(os.cpu_count() / len(burst_gdf))
     elif len(burst_gdf) <= max_workers:
         config_dict['gpt_max_workers'] = int(max_workers / len(burst_gdf))
+        max_workers = int(len(burst_gdf))
 
     out_files = {'bs': [], 'ls': [], 'coh': [], 'pol': []}
     # now we run with godale, which works also with 1 worker

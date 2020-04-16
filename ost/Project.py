@@ -686,7 +686,7 @@ class Sentinel1Batch(Sentinel1):
             h.remove_folder_content(self.processing_dir)
 
         self.burst_inventory = burst_inventory.get_bursts_by_polygon(
-            burst_inv=burst_inventory,
+            burst_inv=self.burst_inventory,
             out_poly=loads(self.aoi)
         )
         # --------------------------------------------
