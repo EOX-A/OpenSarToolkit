@@ -38,8 +38,6 @@ def bursts_to_ards(
     elif len(burst_gdf) <= max_workers:
         config_dict['gpt_max_workers'] = int(max_workers / len(burst_gdf))
 
-    logger.info(max_workers)
-    logger.info(config_dict['gpt_max_workers'])
     out_files = {'bs': [], 'ls': [], 'coh': [], 'pol': []}
     # now we run with godale, which works also with 1 worker
     if max_workers == 1 or len(burst_gdf) == 1:
