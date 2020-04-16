@@ -1,12 +1,10 @@
 import os
 import json
-import glob
 
 import logging
 import rasterio
 import geopandas as gpd
 
-from os.path import join as opj
 from datetime import datetime
 from shapely.wkt import loads
 from pathlib import Path
@@ -687,6 +685,10 @@ class Sentinel1Batch(Sentinel1):
             logger.info('Deleting processing folder to start from scratch')
             h.remove_folder_content(self.processing_dir)
 
+        self.burst_inventory = burst_inventory.get_bursts_by_polygon(
+            burst_inv=burst_inventory,
+            out_poly=loads(self.aoi)
+        )
         # --------------------------------------------
         # 2 Check if within SRTM coverage
         # set ellipsoid correction and force GTC production
