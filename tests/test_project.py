@@ -1,3 +1,4 @@
+import os
 from ost.helpers.settings import CONFIG_CHECK
 
 
@@ -10,7 +11,7 @@ def test_update_ard_param(grd_project_class):
 # Test GRDs to ARD kind of batch
 def test_grds_to_ards(grd_project_class):
     for ard_type in CONFIG_CHECK['type']['choices']:
-        if ard_type in CONFIG_CHECK['ard_types_grd']['choices']:
+        if ard_type in CONFIG_CHECK['ard_types_grd']['choices'] and 'OST-GTC' in ard_type:
             grd_project_class.ard_parameters["single_ARD"]["type"] = ard_type
             grd_project_class.update_ard_parameters()
             grd_project_class.ard_parameters['single_ARD']['resolution'] = 20
@@ -23,6 +24,9 @@ def test_grds_to_ards(grd_project_class):
                 overwrite=True,
                 to_tif=True,
             )
+            for i, row in grd_project_class.inventory.iterrows():
+                assert os.path.isfile(row.out_dimap)
+                assert os.path.isfile(row.out_tif)
 
 
 # Test Bursts to ARD kind of batch
