@@ -1,6 +1,6 @@
-descartes
 fiona
 gdal
+godale
 geopandas
 matplotlib
 numpy
@@ -8,10 +8,12 @@ pandas
 psycopg2-binary
 rasterio
 requests
-rtree
 scipy
 shapely
 tqdm
 imageio
 joblib
+retry
 pytest
+pytest-cov
+pytest-runner

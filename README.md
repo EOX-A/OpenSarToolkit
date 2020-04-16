@@ -1,4 +1,5 @@
 # Open SAR Toolkit (OST)
+[![Build Status](https://travis-ci.org/ESA-PhiLab/OpenSarToolkit.svg?branch=master)](https://travis-ci.org/ESA-PhiLab/OpenSarToolkit)
 
 ## Objective
 
@@ -129,7 +130,7 @@ https://docs.conda.io/projects/conda/en/latest/user-guide/install/
 
 Then run the conda command to install OST's dependencies:
 ```
-conda install pip gdal jupyter jupyterlab git matplotlib numpy rasterio imageio rtree geopandas fiona shapely matplotlib descartes tqdm scipy
+conda install pip gdal jupyter jupyterlab git matplotlib numpy rasterio imageio rtree geopandas fiona shapely matplotlib descartes tqdm scipy joblib retrying pytest pytest-cov
 ```
 
 Finally get the OST by using pip 
@@ -191,4 +192,5 @@ that are developed in parallel to this core package and should help to get start
 
 ## Author
 
-- Andreas Vollrath, ESA
+* Andreas Vollrath, ESA
+* Petr Sevcik, EOX
