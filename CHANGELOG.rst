@@ -6,8 +6,8 @@ Changelog
 -----
 0.9.5
 -----
+* 2020-04-16
 * temporary EOX version, core functions should work for both SLC and GRD
-* restored GRD processing
 * Project GRD and burst processing goes up to (including) Timescans
     * Mosaic creation currently under construction and will raise Warning if triggered in the project
 * changed retrying module to retry
