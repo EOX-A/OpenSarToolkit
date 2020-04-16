@@ -1,83 +1,20 @@
-#! /usr/bin/env python
-"""
-This script allows to sort Sentinel-1 data for homogeneous large-scale mapping.
-"""
-
-# import stdlib modules
 import itertools
 
 # some more libs for plotting and DB connection
 import fiona
 import geopandas as gpd
+import logging
 
 from shapely.ops import unary_union
 
 # import internal modules
-from ost.helpers.db import pgHandler
 from ost.helpers import vector as vec
 
-# script infos
-__author__ = 'Andreas Vollrath'
-__copyright__ = 'phi-lab, European Space Agency'
-
-__license__ = 'GPL'
-__version__ = '1.0'
-__maintainer__ = 'Andreas Vollrath'
-__email__ = ''
-__status__ = 'Production'
-
-
-def read_s1_inventory(inputfile):
-    '''Reads a Sentinel-1 OST conform inventory shapefile into GeoDataFrame
-
-    This function intends to transform different spatial formats in which
-    inventory can be stored to transform into a geopandas GeoDataFrame
-    that will be handled by all other methods.
-
-
-    Args:
-        inputfile (str or path): path to an OST compliant invetory shapefile
-
-    Returns:
-        GeoDataFrame ():
-    '''
-
-    if inputfile[-4:] == '.shp':
-        print(' INFO: Importing Sentinel-1 inventory data from ESRI '
-              ' shapefile:\n {}'.format(inputfile))
-        column_names = ['id', 'identifier', 'polarisationmode',
-                        'orbitdirection', 'acquisitiondate', 'relativeorbit',
-                        'orbitnumber', 'producttype', 'slicenumber', 'size',
-                        'beginposition', 'endposition',
-                        'lastrelativeorbitnumber', 'lastorbitnumber', 'uuid',
-                        'platformidentifier', 'missiondatatakeid',
-                        'swathidentifier', 'ingestiondate',
-                        'sensoroperationalmode', 'geometry']
-
-        out_frame = gpd.read_file(inputfile)
-        out_frame.columns = column_names
-
-    elif inputfile[-7:] == '.sqlite':
-        print(' INFO: Importing Sentinel-1 inventory data from spatialite '
-              ' DB file:\n {}'.format(inputfile))
-        # needs to be added
-    else:
-        print(' INFO: Importing Sentinel-1 inventory data from PostGreSQL DB '
-              ' table:\n {}'.format(inputfile))
-        db_connect = pgHandler()
-        sql = 'select * from {}'.format(inputfile)
-        out_frame = gpd.GeoDataFrame.from_postgis(sql, db_connect.connection,
-                                                  geom_col='geometry')
-
-    if len(out_frame) >= 0:
-        print(' INFO: Succesfully converted inventory data into a'
-              ' GeoPandas Geo-Dataframe.')
-
-    return out_frame
+logger = logging.getLogger(__name__)
 
 
 def _remove_double_entries(inventory_df):
-    '''Removing acquisitions that appear twice in the inventory
+    """Removing acquisitions that appear twice in the inventory
 
     Sometimes acquisitions are processed more than once. The last 4 digits of
     the re-processed scene identifier then change. When searching for data,
@@ -91,24 +28,24 @@ def _remove_double_entries(inventory_df):
     Returns:
         inventory_df (gdf): the manipulated inventory GeodataFrame
 
-    '''
+    """
 
     # filter footprint data frame for obit direction and polarisation &
     # get unqiue entries
     idx = inventory_df.groupby(
         inventory_df['identifier'].str.slice(0, 63))[
-            'ingestiondate'].transform(max) == inventory_df['ingestiondate']
+              'ingestiondate'].transform(max) == inventory_df['ingestiondate']
 
     # re-initialize GDF geometry due to groupby function
     crs = fiona.crs.from_epsg(4326)
     gdf = gpd.GeoDataFrame(inventory_df[idx], geometry='geometry', crs=crs)
-    print(' INFO: {} frames remain after double entry removal'.format(
+    logger.info('{} frames remain after double entry removal'.format(
         len(inventory_df[idx])))
     return gdf
 
 
 def _remove_outside_aoi(aoi_gdf, inventory_df):
-    '''Removes scenes that are located outside the AOI
+    """Removes scenes that are located outside the AOI
 
     The search routine works over a simplified representation of the AOI.
     This may then include acquistions that do not overlap with the AOI.
@@ -123,7 +60,7 @@ def _remove_outside_aoi(aoi_gdf, inventory_df):
     Returns:
         inventory_df (gdf): the manipulated inventory GeodataFrame
 
-    '''
+    """
 
     # get columns of input dataframe for later return function
     cols = inventory_df.columns
@@ -143,7 +80,7 @@ def _remove_outside_aoi(aoi_gdf, inventory_df):
 
 
 def _handle_equator_crossing(inventory_df):
-    '''Adjustment of track number when crossing the equator
+    """Adjustment of track number when crossing the equator
 
     OST relies on unique numbers of relative orbit. For ascending tracks
     crossing the equator the relative orbit will increase by 1.
@@ -158,7 +95,7 @@ def _handle_equator_crossing(inventory_df):
     Returns:
         inventory_df (gdf): the manipulated inventory GeodataFrame
 
-    '''
+    """
 
     # get the relativeorbitnumbers that change with equator crossing
     tracks = inventory_df.lastrelativeorbitnumber[
@@ -171,7 +108,6 @@ def _handle_equator_crossing(inventory_df):
         dates = inventory_df.acquisitiondate[
             (inventory_df['relativeorbit'] == track)].unique()
         for date in dates:
-
             # ----------------------------------------------------
             # ### NEEDS TO BE ADDED THE CHECK
             # check if consecutive orbitnumers are from the same track
@@ -195,7 +131,7 @@ def _handle_equator_crossing(inventory_df):
 
 
 def _exclude_marginal_tracks(aoi_gdf, inventory_df, area_reduce=0.1):
-    '''
+    """
     This function takes the AOI and the footprint inventory
     and checks if any of the tracks are unnecessary, i.e.
     if the AOI can be covered by all the remaining tracks.
@@ -211,7 +147,7 @@ def _exclude_marginal_tracks(aoi_gdf, inventory_df, area_reduce=0.1):
     Returns:
         inventory_df (gdf): the manipulated inventory GeodataFrame
 
-    '''
+    """
 
     # get Area of AOI
     aoi_area = aoi_gdf.area.sum()
@@ -226,24 +162,24 @@ def _exclude_marginal_tracks(aoi_gdf, inventory_df, area_reduce=0.1):
         intersect_track = aoi_gdf.geometry.intersection(trackunion).area.sum()
 
         if intersect_track >= aoi_area - area_reduce:
-            print(' INFO: excluding track {}'.format(track))
+            logger.info('excluding track {}'.format(track))
             inventory_refined = inventory_df[
                 inventory_df['relativeorbit'] != track]
 
     # see if there is actually any marginal track
     try:
         inventory_df = inventory_refined
-        print(' INFO: {} frames remain after non-AOI overlap'.format(
+        logger.info('{} frames remain after non-AOI overlap'.format(
             len(inventory_df)))
     except NameError:
         pass
     else:
-        print(' INFO: All tracks fully overlap the AOI. Not removing anything')
+        logger.info('All tracks fully overlap the AOI. Not removing anything')
     return inventory_df
 
 
 def _remove_incomplete_tracks(aoi_gdf, inventory_df):
-    '''Removes incomplete tracks with respect to the AOI
+    """Removes incomplete tracks with respect to the AOI
 
     Sentinel-1 follows an operational acquisition scheme where .
     However, in some cases, a complete acquisition was not possible, which may
@@ -260,7 +196,7 @@ def _remove_incomplete_tracks(aoi_gdf, inventory_df):
     Returns:
         inventory_df (gdf): the manipulated inventory GeodataFrame
 
-    '''
+    """
 
     # define final output gdf
     out_frame = gpd.GeoDataFrame(columns=inventory_df.columns)
@@ -277,7 +213,8 @@ def _remove_incomplete_tracks(aoi_gdf, inventory_df):
 
         # loop through dates
         for date in sorted(inventory_df['acquisitiondate'][
-                inventory_df['relativeorbit'] == track].unique(),
+                               inventory_df[
+                                   'relativeorbit'] == track].unique(),
                            reverse=False):
 
             gdf_date = inventory_df[(inventory_df['relativeorbit'] == track) &
@@ -291,13 +228,13 @@ def _remove_incomplete_tracks(aoi_gdf, inventory_df):
             if intersect_track <= intersect_date + 0.15:
                 out_frame = out_frame.append(gdf_date)
 
-    print(' INFO: {} frames remain after removal of non-full AOI crossing'
-          .format(len(out_frame)))
+    logger.info('{} frames remain after removal of non-full AOI crossing'
+                .format(len(out_frame)))
     return out_frame
 
 
 def _handle_non_continous_swath(inventory_df):
-    '''Removes incomplete tracks with respect to the AOI
+    """Removes incomplete tracks with respect to the AOI
 
     In some cases the AOI is covered by 2 different parts of the same track.
     OST assumes that acquisitions with the same "relative orbit" (i.e. track)
@@ -311,7 +248,7 @@ def _handle_non_continous_swath(inventory_df):
     Returns:
         inventory_df (gdf): the manipulated inventory GeodataFrame
 
-    '''
+    """
 
     tracks = inventory_df.lastrelativeorbitnumber.unique()
     inventory_df['slicenumber'] = inventory_df['slicenumber'].astype(int)
@@ -348,10 +285,10 @@ def _handle_non_continous_swath(inventory_df):
 
 
 def _forward_search(aoi_gdf, inventory_df, area_reduce=0):
-    '''
+    """
     This functions loops through the acquisition dates and
     identifies the time interval needed to create full coverages.
-    '''
+    """
 
     # get AOI area
     aoi_area = aoi_gdf.area.sum()
@@ -414,14 +351,14 @@ def _forward_search(aoi_gdf, inventory_df, area_reduce=0):
 
 
 def _backward_search(aoi_gdf, inventory_df, datelist, area_reduce=0):
-    '''
+    """
     This function takes the footprint dataframe and the datelist
     created by the _forward_search function to sort out
     duplicate tracks apparent in the mosaics.
     It searches from the last acqusiition date backwards
     in order to assure minimum time gap between the acquisitions of
     different swaths.
-    '''
+    """
 
     # get AOI area
     aoi_area = aoi_gdf.area.sum()
@@ -485,7 +422,6 @@ def _backward_search(aoi_gdf, inventory_df, datelist, area_reduce=0):
 
                     # we break the loop if we found enough
                     if intersect_area >= aoi_area - area_reduce:
-
                         # cleanup scenes
                         out_frame = out_frame.append(temp_df)
                         temp_df = gpd.GeoDataFrame(
@@ -503,13 +439,26 @@ def _backward_search(aoi_gdf, inventory_df, datelist, area_reduce=0):
                             crs={'init': 'epsg:4326', 'no_defs': True})
 
 
-def search_refinement(aoi, inventory_df, inventory_dir,
+def search_refinement(aoi,
+                      inventory_df,
+                      inventory_dir,
                       exclude_marginal=True,
                       full_aoi_crossing=True,
                       mosaic_refine=True,
-                      area_reduce=0.05, complete_coverage=True):
+                      area_reduce=0.05,
+                      complete_coverage=True
+                      ):
+    """
+    :param aoi:
+    :param inventory_df:
+    :param inventory_dir:
+    :param exclude_marginal:
+    :param full_aoi_crossing:
+    :param mosaic_refine:
+    :param area_reduce:
+    :param complete_coverage:
+    :return:
     '''A function to refine the Sentinel-1 search by certain criteria
-
     Args:
         aoi (WKT str):
         inventory_df (GeoDataFrame):
@@ -519,7 +468,8 @@ def search_refinement(aoi, inventory_df, inventory_dir,
         refined inventory (dictionary):
         coverages (dictionary):
 
-    '''
+    """
+
     # creat AOI GeoDataframe and calulate area
     aoi_gdf = vec.wkt_to_gdf(aoi)
     aoi_area = aoi_gdf.area.sum()
@@ -536,15 +486,15 @@ def search_refinement(aoi, inventory_df, inventory_dir,
     # loop through all possible combinations
     for pol, orb in itertools.product(pols, orbit_directions):
 
-        print(' INFO: Coverage analysis for {} tracks in {} polarisation.'
-              .format(orb, pol))
+        logger.info('Coverage analysis for {} tracks in {} polarisation.'
+                    .format(orb, pol))
 
         # subset the footprint for orbit direction and polarisations
         inv_df_sorted = inventory_df[
             (inventory_df['polarisationmode'] == pol) &
             (inventory_df['orbitdirection'] == orb)]
 
-        print(' INFO: {} frames for {} tracks in {} polarisation.'.format(
+        logger.info('{} frames for {} tracks in {} polarisation.'.format(
             len(inv_df_sorted), orb, pol))
 
         # calculate intersected area
@@ -568,7 +518,7 @@ def search_refinement(aoi, inventory_df, inventory_dir,
 
             # get number of tracks
             nr_of_tracks = len(inventory_refined.relativeorbit.unique())
-            print(nr_of_tracks)
+
             if exclude_marginal is True and nr_of_tracks > 1:
                 inventory_refined = _exclude_marginal_tracks(
                     aoi_gdf, inventory_refined, area_reduce)
@@ -586,17 +536,15 @@ def search_refinement(aoi, inventory_df, inventory_dir,
                     aoi_gdf, inventory_refined, datelist, area_reduce)
 
             if len(inventory_refined) != 0:
-                vec.inventory_to_shp(
-                    inventory_refined, '{}/{}_{}_{}.shp'.format(
-                        inventory_dir, len(datelist), orb, ''.join(pol.split())
-                        )
-                    )
-                inventory_dict['{}_{}'.format(
-                    orb, ''.join(pol.split()))] = inventory_refined
-                coverage_dict['{}_{}'.format(
-                    orb, ''.join(pol.split()))] = len(datelist)
+                pols = ''.join(pol.split())
+                out = inventory_dir.joinpath(
+                    f'{len(datelist)}_{orb}_{pols}.gpkg')
 
-            print(' INFO: Found {} full coverage mosaics.'
-                  .format(len(datelist)))
+                inventory_refined.to_file(out, driver='GPKG')
+
+                inventory_dict[f'{orb}_{pols}'] = inventory_refined
+                coverage_dict[f'{orb}_{pols}'] = len(datelist)
+
+            logger.info(f'Found {len(datelist)} full coverage mosaics.')
 
     return inventory_dict, coverage_dict

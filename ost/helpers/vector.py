@@ -1,18 +1,105 @@
 import os
+from os.path import join as opj
+import numpy as np
 import sys
 import json
+import glob
 from functools import partial
+import rasterio
+import numpy.ma as ma
+from affine import Affine
 
 import osr
 import ogr
 import pyproj
 import geopandas as gpd
+import logging
 
 from shapely.ops import transform
 from shapely.wkt import loads
 from shapely.geometry import Point, Polygon, mapping, shape
 from fiona import collection
 from fiona.crs import from_epsg
+
+from ost.helpers import helpers as h
+
+logger = logging.getLogger(__name__)
+
+
+def ls_to_vector(infile, out_path=None, driver="GPKG", buffer=2):
+    prefix = glob.glob(os.path.abspath(infile[:-4]) + '*data')[0]
+    if out_path is None:
+        out_path = prefix.replace('.data', '.gpkg')
+    if len(glob.glob(opj(prefix, '*layover_shadow*.img'))) == 1:
+        ls_mask = glob.glob(opj(prefix, '*layover_shadow*.img'))[0]
+    else:
+        ls_mask = None
+
+    if not ls_mask:
+        return None
+
+    features_gdf = gpd.GeoDataFrame()
+    features_gdf['geometry'] = None
+
+    with rasterio.open(ls_mask) as src:
+        ls_arr = ma.masked_array(
+            data=np.expand_dims(
+                buffer_array(np.where(src.read(1) > 0, 1, 0), buffer=buffer), axis=0
+            ).astype(np.uint8, copy=False),
+            mask=np.expand_dims(
+                buffer_array(np.where(src.read(1) > 0, 1, 0), buffer=buffer), axis=0
+            ).astype(np.bool, copy=False)
+        )
+        shapes = rasterio.features.shapes(ls_arr.data,
+                                          connectivity=4,
+                                          mask=ls_arr.mask,
+                                          transform=src.transform
+                                          )
+    geom = [shape(i) for i, v in shapes]
+    features_gdf = gpd.GeoDataFrame({'geometry': geom})
+    if features_gdf.empty:
+        return None
+    features_gdf.to_file(out_path, driver=driver)
+    h.delete_dimap(dimap_prefix=prefix.replace('.data', ''))
+    return out_path
+
+
+def buffer_array(arr, buffer=0):
+    """
+    Buffer True values of array.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Bool array.
+    buffer : int
+        Buffer in pixels around masked patches.
+
+    Returns
+    -------
+    np.ndarray
+    """
+    if not isinstance(arr, np.ndarray):
+        raise TypeError("not a NumPy array")
+    elif arr.ndim != 2:
+        raise TypeError("array not 2-dimensional")
+    elif arr.dtype != np.bool:
+        arr = arr.astype(np.bool)
+
+    if buffer == 0 or not arr.any():
+        return arr.astype(np.bool, copy=False)
+    else:
+        return rasterio.features.geometry_mask(
+            (
+                shape(p).buffer(buffer)
+                for p, v in
+            rasterio.features.shapes(arr.astype(np.uint8, copy=False), mask=arr)
+                if v
+            ),
+            arr.shape,
+            Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
+            invert=True
+        ).astype(np.bool, copy=False)
 
 
 def get_epsg(prjfile):
@@ -207,7 +294,7 @@ def shp_to_wkt(shapefile, buffer=None, convex=False, envelope=False):
         wkt = geom.ExportToWkt()
 
     if proj4 != '+proj=longlat +datum=WGS84 +no_defs':
-        print(' INFO: Reprojecting AOI file to Lat/Long (WGS84)')
+        logger.info('Reprojecting AOI file to Lat/Long (WGS84)')
         wkt = reproject_geometry(wkt, proj4, 4326).ExportToWkt()
 
     # do manipulations if needed
@@ -254,7 +341,7 @@ def shp_to_gdf(shapefile):
     proj4 = get_proj4(prjfile)
 
     if proj4 != '+proj=longlat +datum=WGS84 +no_defs':
-        print(' INFO: reprojecting AOI layer to WGS84.')
+        logger.info('reprojecting AOI layer to WGS84.')
         # reproject
         gdf.crs = (proj4)
         gdf = gdf.to_crs({'init': 'epsg:4326'})
@@ -263,8 +350,10 @@ def shp_to_gdf(shapefile):
 
 
 def wkt_to_gdf(wkt):
-    
+
+    # load wkt
     geometry = loads(wkt)
+
     # point wkt
     if geometry.geom_type == 'Point':
         data = {'id': ['1'],
@@ -275,10 +364,15 @@ def wkt_to_gdf(wkt):
     elif geometry.geom_type == 'Polygon':
         data = {'id': ['1'],
                 'geometry': loads(wkt)}
-        gdf = gpd.GeoDataFrame(data)
+        gdf = gpd.GeoDataFrame(
+            data, crs = {'init': 'epsg:4326',  'no_defs': True}
+        )
 
     # geometry collection of single multiploygon
-    elif geometry.geom_type == 'GeometryCollection' and len(geometry) == 1 and 'MULTIPOLYGON' in str(geometry):
+    elif (
+            geometry.geom_type == 'GeometryCollection' and
+            len(geometry) == 1 and 'MULTIPOLYGON' in str(geometry)
+    ):
 
         data = {'id': ['1'],
                 'geometry': geometry}
@@ -293,14 +387,16 @@ def wkt_to_gdf(wkt):
                                 'geometry': feats}, 
                                  geometry='geometry', 
                                  crs = gdf.crs
-                                  )
+        )
     
     # geometry collection of single polygon
     elif geometry.geom_type == 'GeometryCollection' and len(geometry) == 1:
         
         data = {'id': ['1'],
                 'geometry': geometry}
-        gdf = gpd.GeoDataFrame(data, crs = {'init': 'epsg:4326',  'no_defs': True})
+        gdf = gpd.GeoDataFrame(
+            data, crs = {'init': 'epsg:4326',  'no_defs': True}
+        )
 
     # everything else (hopefully)
     else:
@@ -317,12 +413,6 @@ def wkt_to_gdf(wkt):
               )
     
     return gdf
-
-
-def wkt_to_shp(wkt, outfile):
-
-    gdf = wkt_to_gdf(wkt)
-    gdf.to_file(outfile)
 
 
 def gdf_to_json_geometry(gdf):
@@ -348,29 +438,16 @@ def gdf_to_json_geometry(gdf):
             if feature['geometry']]
 
 
-def inventory_to_shp(inventory_df, outfile):
-
-    # change datetime datatypes
-    inventory_df['acquisitiondate'] = inventory_df[
-        'acquisitiondate'].astype(str)
-    inventory_df['ingestiondate'] = inventory_df['ingestiondate'].astype(str)
-    inventory_df['beginposition'] = inventory_df['beginposition'].astype(str)
-    inventory_df['endposition'] = inventory_df['endposition'].astype(str)
-
-    # write to shapefile
-    inventory_df.to_file(outfile)
-
-
 def exterior(infile, outfile, buffer=None):
 
     gdf = gpd.read_file(infile, crs={'init': 'EPSG:4326'})
     gdf.geometry = gdf.geometry.apply(lambda row: Polygon(row.exterior))
     gdf_clean = gdf[gdf.geometry.area >= 1.0e-6]
-    gdf_clean.geometry = gdf_clean.geometry.buffer(-0.0018)
-    #if buffer:
-    #    gdf.geometry = gdf.geometry.apply(
-     #           lambda row: Polygon(row.buffer(-0.0018)))
-    gdf_clean.to_file(outfile)
+
+    if buffer:
+        gdf_clean.geometry = gdf_clean.geometry.buffer(buffer)
+
+    gdf_clean.to_file(outfile, driver='GPKG')
 
 
 def difference(infile1, infile2, outfile):
@@ -380,7 +457,7 @@ def difference(infile1, infile2, outfile):
 
     gdf3 = gpd.overlay(gdf1, gdf2, how='symmetric_difference')
 
-    gdf3.to_file(outfile)
+    gdf3.to_file(outfile, driver='GPKG')
 
 
 def buffer_shape(infile, outfile, buffer=None):
