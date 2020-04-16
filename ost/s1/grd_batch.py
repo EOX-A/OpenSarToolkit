@@ -88,8 +88,8 @@ def grd_to_ard_batch(
                     'Acquisition from {} of track {}'
                     ' already processed'.format(acquisition_date, track)
                 )
-                for s in list_of_scenes:
-                    for i, row in inventory_df.iterrows():
+                for i, row in inventory_df.iterrows():
+                    for s in list_of_scenes:
                         if row.identifier == Sentinel1Scene(s).scene_id:
                             if os.path.isfile(out_file):
                                 inventory_df.at[i, 'out_dimap'] = out_file
@@ -103,11 +103,12 @@ def grd_to_ard_batch(
 
                             if to_tif and not os.path.isfile(tif_file) and \
                                     os.path.isfile(out_file):
-                                tif_file = ard_to_rgb(infile=out_file,
-                                                      outfile=tif_file,
-                                                      driver='GTiff',
-                                                      to_db=True
-                                                      )
+                                ard_to_rgb(
+                                    infile=out_file,
+                                    outfile=tif_file,
+                                    driver='GTiff',
+                                    to_db=True
+                                    )
                                 inventory_df.at[i, 'out_tif'] = tif_file
                             elif to_tif and os.path.isfile(tif_file):
                                 inventory_df.at[i, 'out_tif'] = tif_file
@@ -130,27 +131,20 @@ def grd_to_ard_batch(
                     subset=subset,
                     gpt_max_workers=config_dict['gpt_max_workers']
                     )
-                if to_tif:
-                    tif_file = ard_to_rgb(infile=out_file,
-                                          outfile=tif_file,
-                                          driver='GTiff',
-                                          to_db=True
-                                          )
-
                 for i, row in inventory_df.iterrows():
                     for s in list_of_scenes:
                         if row.identifier == Sentinel1Scene(s).scene_id:
-                            try:
-                                inventory_df.at[i, 'out_dimap'] = out_file
-                                inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
-                                if to_tif:
-                                    inventory_df.at[i, 'out_tif'] = tif_file
-                                else:
-                                    inventory_df.at[i, 'out_tif'] = None
-                            except:
-                                inventory_df.at[i, 'out_dimap'] = None
-                                inventory_df.at[i, 'out_tif'] = None
-                                inventory_df.at[i, 'out_ls_mask'] = None
+                            inventory_df.at[i, 'out_dimap'] = out_file
+                            inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
+                            if to_tif:
+                                ard_to_rgb(
+                                    infile=out_file,
+                                    outfile=tif_file,
+                                    driver='GTiff',
+                                    to_db=True
+                                )
+                                inventory_df.at[i, 'out_tif'] = tif_file
+
     return inventory_df
 
 
