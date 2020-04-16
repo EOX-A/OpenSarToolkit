@@ -11,7 +11,7 @@ def test_update_ard_param(grd_project_class):
 # Test GRDs to ARD kind of batch
 def test_grds_to_ards(grd_project_class):
     for ard_type in CONFIG_CHECK['type']['choices']:
-        if ard_type in CONFIG_CHECK['ard_types_grd']['choices'] and 'OST-GTC' in ard_type:
+        if ard_type in CONFIG_CHECK['ard_types_grd']['choices']:
             grd_project_class.ard_parameters["single_ARD"]["type"] = ard_type
             grd_project_class.update_ard_parameters()
             grd_project_class.ard_parameters['single_ARD']['resolution'] = 20
