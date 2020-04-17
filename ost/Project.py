@@ -343,7 +343,8 @@ class Sentinel1(Generic):
                          full_aoi_crossing=True,
                          mosaic_refine=True,
                          area_reduce=0.05,
-                         complete_coverage=True):
+                         complete_coverage=True
+                         ):
 
         self.refined_inventory_dict, self.coverages = refine.search_refinement(
             self.aoi,
