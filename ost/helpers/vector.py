@@ -1,4 +1,5 @@
 import os
+import math
 from os.path import join as opj
 import numpy as np
 import sys
@@ -11,7 +12,6 @@ from affine import Affine
 
 import osr
 import ogr
-import pyproj
 import geopandas as gpd
 import logging
 
@@ -195,25 +195,29 @@ def reproject_geometry(geom, inproj4, out_epsg):
 
 
 def geodesic_point_buffer(lat, lon, meters, envelope=False):
-
-    # get WGS 84 proj
-    proj_wgs84 = pyproj.Proj(init='epsg:4326')
-
-    # Azimuthal equidistant projection
-    aeqd_proj = '+proj=aeqd +lat_0={lat} +lon_0={lon} +x_0=0 +y_0=0'
-    project = partial(
-        pyproj.transform,
-        pyproj.Proj(aeqd_proj.format(lat=lat, lon=lon)),
-        proj_wgs84)
-
-    buf = Point(0, 0).buffer(meters)  # distance in metres
-
+    round_area = Point(lon, lat).buffer(meters_to_degrees(latitude=lat, meters=meters))
     if envelope is True:
-        geom = Polygon(transform(project, buf).exterior.coords[:]).envelope
+        geom = round_area.envelope
     else:
-        geom = Polygon(transform(project, buf).exterior.coords[:])
+        geom = round_area
+    return geom.wkt
 
-    return geom.to_wkt()
+
+def meters_to_degrees(latitude, meters):
+    '''Convert resolution in meters to degree based on Latitude
+
+    '''
+    earth_radius = 6378137
+    degrees_to_radians = math.pi/180.0
+    radians_to_degrees = 180.0/math.pi
+    # "Given a latitude and a distance west, return the change in longitude."
+    # Find the radius of a circle around the earth at given latitude.
+    if isinstance(latitude, list):
+        latitude = latitude[1]
+    if latitude > 90 or latitude < -90:
+        raise ValueError
+    r = earth_radius*math.cos(latitude*degrees_to_radians)
+    return (meters/r)*radians_to_degrees
 
 
 def latlon_to_wkt(lat, lon, buffer_degree=None, buffer_meter=None, envelope=False):
@@ -479,7 +483,7 @@ def buffer_shape(infile, outfile, buffer=None):
                 })
 
 
-def plot_inventory(aoi, inventory_df, transparency=0.05, annotate = False):
+def plot_inventory(aoi, inventory_df, transparency=0.05, annotate=False):
 
     import matplotlib.pyplot as plt
 
