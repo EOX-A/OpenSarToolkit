@@ -115,7 +115,8 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
     else:
         process = subprocess.run(shlex.split(command),
                                  stderr=stderr,
-                                 stdout=dev_null
+                                 stdout=dev_null,
+                                 shell=True
                                  )
 
     return_code = process.returncode
