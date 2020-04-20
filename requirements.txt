@@ -5,6 +5,7 @@ geopandas
 matplotlib
 numpy
 pandas
+psycopg2-binary
 rasterio
 requests
 scipy
