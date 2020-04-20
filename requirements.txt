@@ -5,14 +5,12 @@ geopandas
 matplotlib
 numpy
 pandas
-psycopg2-binary
 rasterio
 requests
 scipy
 shapely
 tqdm
 imageio
-joblib
 retry
 pytest
 pytest-cov
