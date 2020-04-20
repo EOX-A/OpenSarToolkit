@@ -7,6 +7,8 @@ import itertools
 import logging
 import gdal
 
+from shapely.wkt import loads
+
 from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers import raster as ras
 from ost.generic import ts_extent
@@ -71,6 +73,24 @@ def grd_to_ard_batch(
 
     for track, allScenes in processing_dict.items():
         for list_of_scenes in processing_dict[track]:
+            if subset is not None:
+                acq_poly = None
+                sub_poly = loads(subset)
+                for scene in list_of_scenes:
+                    if acq_poly is None:
+                        acq_poly = Sentinel1Scene(scene).get_product_polygon(
+                            download_dir=download_dir
+                        )
+                    else:
+                        acq_poly = acq_poly.cascaded_union(
+                            Sentinel1Scene(scene).get_product_polygon(
+                                download_dir=download_dir
+                            )
+                        )
+                if (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 70 or \
+                        acq_poly.within(sub_poly):
+                    subset = None
+
             # get acquisition date
             acquisition_date = Sentinel1Scene(list_of_scenes[0]).start_date
             # create a subdirectory baed on acq. date
@@ -137,12 +157,13 @@ def grd_to_ard_batch(
                             inventory_df.at[i, 'out_dimap'] = out_file
                             inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
                             if to_tif:
-                                ard_to_rgb(
-                                    infile=out_file,
-                                    outfile=tif_file,
-                                    driver='GTiff',
-                                    to_db=True
-                                )
+                                if not os.path.exists(tif_file):
+                                    ard_to_rgb(
+                                        infile=out_file,
+                                        outfile=tif_file,
+                                        driver='GTiff',
+                                        to_db=True
+                                    )
                                 inventory_df.at[i, 'out_tif'] = tif_file
 
     return inventory_df

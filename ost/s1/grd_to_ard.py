@@ -73,7 +73,7 @@ def grd_to_ard(filelist,
             if return_code != 0:
                 h.delete_dimap(grd_import)
                 raise GPTRuntimeError(
-                    'Something went wrong with slcie assembly/importing'
+                    'Something went wrong with slice assembly/importing'
                 )
 
         # create list of scenes for full acquisition in
@@ -94,7 +94,7 @@ def grd_to_ard(filelist,
         if return_code != 0:
             h.delete_dimap(grd_import)
             raise GPTRuntimeError(
-                'Something went wrong with slcie assembly/importing'
+                'Something went wrong with slice assembly/importing'
             )
 
         # subset mode after slice assembly
