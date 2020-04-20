@@ -760,7 +760,7 @@ class Sentinel1Scene:
                 else:
                     self.center_lat = self._get_center_lat(filelist)
             except Exception as e:
-                raise
+                raise e
         if float(self.center_lat) > 59 or float(self.center_lat) < -59:
             logger.debug(
                 'INFO: Scene is outside SRTM coverage. Will use 30m ASTER'

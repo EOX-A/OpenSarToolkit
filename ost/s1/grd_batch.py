@@ -83,12 +83,12 @@ def grd_to_ard_batch(
                             download_dir=download_dir
                         )
                     else:
-                        acq_poly = unary_union(
+                        acq_poly = unary_union([
                             acq_poly,
                             Sentinel1Scene(scene).get_product_polygon(
                                 download_dir=download_dir
                             )
-                        )
+                        ])
                 if (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 75 or \
                         acq_poly.within(sub_poly):
                     subset = None
