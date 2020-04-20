@@ -87,9 +87,11 @@ def grd_to_ard_batch(
                                 download_dir=download_dir
                             )
                         )
-                if (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 70 or \
+                if (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 75 or \
                         acq_poly.within(sub_poly):
                     subset = None
+                else:
+                    subset = acq_poly.intersection(sub_poly).wkt
 
             # get acquisition date
             acquisition_date = Sentinel1Scene(list_of_scenes[0]).start_date
