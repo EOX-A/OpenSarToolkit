@@ -8,6 +8,7 @@ import logging
 import gdal
 
 from shapely.wkt import loads
+from shapely.ops import unary_union
 
 from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers import raster as ras
@@ -82,7 +83,8 @@ def grd_to_ard_batch(
                             download_dir=download_dir
                         )
                     else:
-                        acq_poly = acq_poly.cascaded_union(
+                        acq_poly = unary_union(
+                            acq_poly,
                             Sentinel1Scene(scene).get_product_polygon(
                                 download_dir=download_dir
                             )
