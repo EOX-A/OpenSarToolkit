@@ -144,7 +144,7 @@ def grd_to_ard(filelist,
                 _grd_remove_border(infile[0])
 
     # set input for next step
-    if os.path.isfile(opj(temp_dir, '{}_imported*dim'.format(file_id))):
+    if os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id))):
         infile = glob.glob(opj(temp_dir, '{}_imported*dim'.format(file_id)))[0]
     else:
         logger.info('%s is an empty product', file_id)
