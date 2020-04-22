@@ -78,6 +78,7 @@ def grd_to_ard(filelist,
 
         # create list of scenes for full acquisition in
         # preparation of slice assembly
+        pre_slice_imports = glob.glob(opj(temp_dir, '*imported.dim'))
         scenelist = ' '.join(glob.glob(opj(temp_dir, '*imported.dim')))
 
         # create file strings
@@ -86,9 +87,8 @@ def grd_to_ard(filelist,
         return_code = _slice_assembly(scenelist, grd_import, logfile)
         
         # delete inputs
-        for file in filelist:
-            h.delete_dimap(opj(temp_dir, '{}_imported'.format(
-                os.path.basename(str(file))[:-5])))
+        for file in pre_slice_imports:
+            h.delete_dimap(file)
         
         # delete output if command failed for some reason and return
         if return_code != 0:
