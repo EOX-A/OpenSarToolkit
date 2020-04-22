@@ -102,7 +102,7 @@ def grd_to_ard(filelist,
             grd_subset = opj(temp_dir, '{}_imported_subset'.format(file_id))
             return_code = _grd_subset_georegion('{}.dim'.format(grd_import), 
                                                 grd_subset, logfile, subset)
-            
+
             # delete slice assembly input to subset
             h.delete_dimap(grd_import)
             
@@ -144,7 +144,8 @@ def grd_to_ard(filelist,
                 _grd_remove_border(infile[0])
 
     # set input for next step
-    if os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id))):
+    if os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id))) or \
+            os.path.isfile(opj(temp_dir, '{}_imported_subset.dim'.format(file_id))):
         infile = glob.glob(opj(temp_dir, '{}_imported*dim'.format(file_id)))[0]
     else:
         logger.info('%s is an empty product', file_id)
