@@ -160,7 +160,7 @@ def grd_to_ard_batch(
                         if row.identifier == Sentinel1Scene(s).scene_id:
                             inventory_df.at[i, 'out_dimap'] = out_file
                             inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
-                            if to_tif:
+                            if to_tif and out_file is not None:
                                 if not os.path.exists(tif_file):
                                     ard_to_rgb(
                                         infile=out_file,
