@@ -88,7 +88,7 @@ def grd_to_ard(filelist,
         
         # delete inputs
         for file in pre_slice_imports:
-            h.delete_dimap(file)
+            h.delete_dimap(file.replace('.dim', ''))
         
         # delete output if command failed for some reason and return
         if return_code != 0:

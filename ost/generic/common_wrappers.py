@@ -304,9 +304,9 @@ def ls_mask(infile, outfile, logfile, ard, gpt_max_workers=os.cpu_count()):
     graph = OST_ROOT.joinpath('graphs/S1_GRD2ARD/3_LSmap.xml')
     dem_dict = ard['dem']
 
-    # ls_mask acceleration, image resampling nearest and 2x resolution
+    # ls_mask acceleration, image resampling nearest and 3x resolution
     image_resampling = 'NEAREST_NEIGHBOUR'
-    image_resolution = ard["resolution"]*2
+    image_resolution = ard["resolution"] * 3
 
     command = (
         f'{GPT_FILE} {graph} -x -q {2 * gpt_max_workers} '
