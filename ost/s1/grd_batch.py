@@ -93,6 +93,18 @@ def grd_to_ard_batch(
                         acq_poly.within(sub_poly):
                     subset = None
 
+                if not acq_poly.intersects(sub_poly):
+                    for i, row in inventory_df.iterrows():
+                        if row.identifier == Sentinel1Scene(scene).scene_id:
+                            logger.debug(
+                                'Scene does not intersect the subset %s',
+                                Sentinel1Scene(scene).scene_id
+                            )
+                            inventory_df.at[i, 'out_dimap'] = None
+                            inventory_df.at[i, 'out_ls_mask'] = None
+                            if to_tif:
+                                inventory_df.at[i, 'out_tif'] = None
+
             # get acquisition date
             acquisition_date = Sentinel1Scene(list_of_scenes[0]).start_date
             # create a subdirectory baed on acq. date
