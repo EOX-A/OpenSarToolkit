@@ -134,7 +134,7 @@ def grd_to_ard(filelist,
     
     # ---------------------------------------------------------------------
     # 2 GRD Border Noise
-    if ard['remove_border_noise']:
+    if ard['remove_border_noise'] and subset is None:
         for polarisation in ['VV', 'VH', 'HH', 'HV']:
             infile = glob.glob(opj(
                     temp_dir, '{}_imported*data'.format(file_id),
