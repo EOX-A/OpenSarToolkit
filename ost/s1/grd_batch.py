@@ -89,7 +89,8 @@ def grd_to_ard_batch(
                                 download_dir=download_dir
                             )
                         ])
-                if (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 80:
+                if (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 80 or \
+                        acq_poly.within(sub_poly):
                     subset = None
                 else:
                     subset = acq_poly.intersection(sub_poly).buffer(0).wkt
