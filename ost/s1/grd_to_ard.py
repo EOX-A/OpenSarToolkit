@@ -98,7 +98,7 @@ def grd_to_ard(filelist,
             )
 
         # subset mode after slice assembly
-        if subset:
+        if subset is not None:
             grd_import = opj(temp_dir, '{}_imported'.format(file_id))
             return_code = _grd_subset_georegion('{}.dim'.format(grd_slice_import),
                                                 grd_import, logfile, subset)
@@ -110,6 +110,9 @@ def grd_to_ard(filelist,
             if return_code != 0:
                 h.delete_dimap(grd_import)
                 raise GPTRuntimeError('Something went wrong when subsetting')
+        else:
+            grd_import = opj(temp_dir, '{}_imported'.format(file_id))
+            h.move_dimap(grd_slice_import, grd_import)
             
     # single scene case
     else:
