@@ -69,7 +69,12 @@ def grd_to_ard(filelist,
             logfile = opj(output_dir, '{}.Import.errLog'.format(
                 os.path.basename(file)[:-5]))
             
-            return_code = _grd_frame_import(file, grd_import, logfile, polars)
+            return_code = _grd_frame_import(file,
+                                            grd_import,
+                                            logfile,
+                                            polars,
+                                            gpt_max_workers=gpt_max_workers
+                                            )
             if return_code != 0:
                 h.delete_dimap(grd_import)
                 raise GPTRuntimeError(
@@ -84,7 +89,11 @@ def grd_to_ard(filelist,
         # create file strings
         grd_slice_import = opj(temp_dir, '{}_slices_imported'.format(file_id))
         logfile = opj(output_dir, '{}._slice_assembly.errLog'.format(file_id))
-        return_code = _slice_assembly(scenelist, grd_slice_import, logfile)
+        return_code = _slice_assembly(scenelist,
+                                      grd_slice_import,
+                                      logfile,
+                                      gpt_max_workers=gpt_max_workers
+                                      )
         
         # delete inputs
         for file in pre_slice_imports:
@@ -101,7 +110,11 @@ def grd_to_ard(filelist,
         if subset is not None:
             grd_import = opj(temp_dir, '{}_imported'.format(file_id))
             return_code = _grd_subset_georegion('{}.dim'.format(grd_slice_import),
-                                                grd_import, logfile, subset)
+                                                grd_import,
+                                                logfile,
+                                                subset,
+                                                gpt_max_workers=gpt_max_workers
+                                                )
 
             # delete slice assembly input to subset
             h.delete_dimap(grd_slice_import)
@@ -120,12 +133,20 @@ def grd_to_ard(filelist,
         logfile = opj(output_dir, '{}.Import.errLog'.format(file_id))
 
         if subset is None:
-            return_code = _grd_frame_import(filelist[0], grd_import, logfile, 
-                                            polars)
+            return_code = _grd_frame_import(filelist[0],
+                                            grd_import,
+                                            logfile,
+                                            polars,
+                                            gpt_max_workers=gpt_max_workers
+                                            )
         else:
-            return_code = _grd_frame_import_subset(filelist[0], grd_import, 
-                                                   subset, logfile, 
-                                                   polars)
+            return_code = _grd_frame_import_subset(filelist[0],
+                                                   grd_import,
+                                                   subset,
+                                                   logfile,
+                                                   polars,
+                                                   gpt_max_workers=gpt_max_workers
+                                                   )
         
         # delete output if command failed for some reason and return
         if return_code != 0:
@@ -372,7 +393,12 @@ def grd_to_ard(filelist,
 
 
 @retry(tries=3, delay=1, logger=logger)
-def _grd_frame_import(infile, outfile, logfile, polarisation='VV,VH,HH,HV'):
+def _grd_frame_import(infile,
+                      outfile,
+                      logfile,
+                      polarisation='VV,VH,HH,HV',
+                      gpt_max_workers=os.cpu_count()
+                      ):
     '''A wrapper of SNAP import of a single Sentinel-1 GRD product
 
     This function takes an original Sentinel-1 scene (either zip or
@@ -400,7 +426,7 @@ def _grd_frame_import(infile, outfile, logfile, polarisation='VV,VH,HH,HV'):
     # construct command
     command = '{} {} -x -q {} -Pinput=\'{}\' -Ppolarisation={} \
                -Poutput=\'{}\''.format(
-        GPT_FILE, graph, 2 * os.cpu_count(), infile, polarisation, outfile)
+        GPT_FILE, graph, 2 * gpt_max_workers, infile, polarisation, outfile)
 
     # run command
     return_code = h.run_command(command, logfile)
@@ -421,7 +447,8 @@ def _grd_frame_import_subset(infile,
                              outfile,
                              georegion,
                              logfile,
-                             polarisation='VV,VH,HH,HV'
+                             polarisation='VV,VH,HH,HV',
+                             gpt_max_workers=os.cpu_count()
                              ):
     '''A wrapper of SNAP import of a subset of single Sentinel-1 GRD product
 
@@ -456,7 +483,7 @@ def _grd_frame_import_subset(infile,
     # construct command
     command = '{} {} -x -q {} -Pinput=\'{}\' -Pregion=\'{}\' -Ppolarisation={} \
                       -Poutput=\'{}\''.format(
-        GPT_FILE, graph, 2 * os.cpu_count(),
+        GPT_FILE, graph, 2 * gpt_max_workers,
         infile, georegion, polarisation, outfile)
 
     # run command and get return code
@@ -473,7 +500,12 @@ def _grd_frame_import_subset(infile,
 
 
 @retry(tries=3, delay=1, logger=logger)
-def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
+def _slice_assembly(filelist,
+                    outfile,
+                    logfile,
+                    polarisation='VV,VH,HH,HV',
+                    gpt_max_workers=os.cpu_count()
+                    ):
     '''A wrapper of SNAP's slice assembly routine
 
     This function assembles consecutive frames acquired at the same date.
@@ -493,7 +525,7 @@ def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
     # construct command
     command = '{} SliceAssembly -x -q {} -PselectedPolarisations={} \
                -t \'{}\' {}'.format(
-        GPT_FILE, 2 * os.cpu_count(), polarisation, outfile, filelist)
+        GPT_FILE, 2 * gpt_max_workers, polarisation, outfile, filelist)
 
     # run command and get return code
     return_code = h.run_command(command, logfile)
@@ -510,7 +542,7 @@ def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
 
 
 @retry(tries=3, delay=1, logger=logger)
-def _grd_subset(infile, outfile, logfile, region):
+def _grd_subset(infile, outfile, logfile, region, gpt_max_workers=os.cpu_count()):
     '''A wrapper around SNAP's subset routine
 
     This function takes an OST imported frame and subsets it according to
@@ -531,7 +563,7 @@ def _grd_subset(infile, outfile, logfile, region):
 
     # construct command
     command = '{} Subset -x -q {} -Pregion={} -t \'{}\' \'{}\''.format(
-        GPT_FILE, 2 * os.cpu_count(), region, outfile, infile)
+        GPT_FILE, 2 * gpt_max_workers, region, outfile, infile)
 
     # run command and get return code
     return_code = h.run_command(command, logfile)
@@ -547,7 +579,12 @@ def _grd_subset(infile, outfile, logfile, region):
 
 
 @retry(tries=3, delay=1, logger=logger)
-def _grd_subset_georegion(infile, outfile, logfile, georegion):
+def _grd_subset_georegion(infile,
+                          outfile,
+                          logfile,
+                          georegion,
+                          gpt_max_workers=os.cpu_count()
+                          ):
     '''A wrapper around SNAP's subset routine
 
     This function takes an OST imported frame and subsets it according to
@@ -569,7 +606,7 @@ def _grd_subset_georegion(infile, outfile, logfile, georegion):
     # extract window from scene
     command = '{} Subset -x -q {} -PcopyMetadata=true ' \
               '-PgeoRegion=\'{}\' -t \'{}\' \'{}\''.format(
-        GPT_FILE, 2 * os.cpu_count(), georegion, outfile, infile
+        GPT_FILE, 2 * gpt_max_workers, georegion, outfile, infile
     )
 
     # run command and get return code
