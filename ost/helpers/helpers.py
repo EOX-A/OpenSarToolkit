@@ -100,6 +100,7 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
 
     currtime = time.time()
 
+    logger.debug('Following command will be executed: %s', command)
     if silent:
         dev_null = open(os.devnull, 'w')
         stderr = subprocess.PIPE
@@ -115,12 +116,12 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
 
     else:
         process = subprocess.run(
-            command,
+            shlex.split(command),
             stderr=stderr,
-            shell=True,
+            stdout=dev_null
         )
     return_code = process.returncode
-    if return_code != 0 and logfile is not None:
+    if return_code != 0 and logfile is not None and process.stderr is not None:
         with open(str(logfile), 'w') as file:
             for line in process.stderr.decode().splitlines():
                 file.write('{}\n'.format(line))
