@@ -44,8 +44,9 @@ def calibration(infile, outfile, logfile, calibrate_to, gpt_max_workers=os.cpu_c
     if return_code == 0:
         logger.info('Calibration to {} successful.'.format(calibrate_to))
     else:
-        print(' ERROR: Calibration exited with an error. \
-                See {} for Snap Error output'.format(logfile))
+        raise GPTRuntimeError(
+            'Calibration exited with an error. See {} for Snap Error output'.format(logfile)
+        )
 
     return return_code
 
@@ -73,8 +74,9 @@ def multi_look(infile, outfile, logfile, rg_looks, az_looks, gpt_max_workers=os.
     if return_code == 0:
         logger.info('Succesfully multi-looked product.')
     else:
-        print(' ERROR: Multi-look exited with an error. \
-                See {} for Snap Error output'.format(logfile))
+        raise GPTRuntimeError(
+            'Multi-look exited with an error. See {} for Snap Error output'.format(logfile)
+        )
 
     return return_code
 

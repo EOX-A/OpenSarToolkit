@@ -1,8 +1,6 @@
 import os
-import random
 import logging
 import glob
-import shutil
 import time
 import numpy as np
 import gdal
@@ -265,8 +263,7 @@ def grd_to_ard(filelist,
             h.delete_dimap(out_ls_mask)
 
         # move out of temp
-        shutil.move('{}.dim'.format(ls_mask), '{}.dim'.format(out_ls_mask))
-        shutil.move('{}.data'.format(ls_mask), '{}.data'.format(out_ls_mask))
+        h.move_dimap(ls_mask, out_ls_mask)
         
     # ---------------------------------------------------------------------
     # 6 Speckle filtering
@@ -375,8 +372,7 @@ def grd_to_ard(filelist,
     #     raise GPTRuntimeError('Something wrong with the GPT output')
     
     # move to final destination
-    shutil.move('{}.dim'.format(geocoded), '{}.dim'.format(out_final))
-    shutil.move('{}.data'.format(geocoded), '{}.data'.format(out_final))
+    h.move_dimap(geocoded, out_final)
 
     # write processed file to keep track of files already processed
     with open(opj(output_dir, '.processed'), 'w') as file:
@@ -394,7 +390,7 @@ def grd_to_ard(filelist,
     return return_code, out_final + '.dim', out_ls_mask
 
 
-@retry(tries=3, delay=random.randint(2, 30), logger=logger)
+@retry(tries=3, delay=12, logger=logger)
 def _grd_frame_import(infile,
                       outfile,
                       logfile,
@@ -444,7 +440,7 @@ def _grd_frame_import(infile,
                               )
 
 
-@retry(tries=3, delay=random.randint(2, 30), logger=logger)
+@retry(tries=3, delay=12, logger=logger)
 def _grd_frame_import_subset(infile,
                              outfile,
                              georegion,
@@ -501,7 +497,7 @@ def _grd_frame_import_subset(infile,
                               )
 
 
-@retry(tries=3, delay=random.randint(2, 30), logger=logger)
+@retry(tries=3, delay=12, logger=logger)
 def _slice_assembly(filelist,
                     outfile,
                     logfile,
@@ -543,7 +539,7 @@ def _slice_assembly(filelist,
         )
 
 
-@retry(tries=3, delay=random.randint(2, 30), logger=logger)
+@retry(tries=3, delay=12, logger=logger)
 def _grd_subset(infile, outfile, logfile, region, gpt_max_workers=os.cpu_count()):
     '''A wrapper around SNAP's subset routine
 
