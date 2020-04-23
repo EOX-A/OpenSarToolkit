@@ -565,9 +565,10 @@ def _grd_subset_georegion(infile, outfile, logfile, georegion):
     logger.info('Subsetting imported imagery.')
 
     # extract window from scene
-    command = '{} Subset -x -q {} -Ssource=\'{}\' -t \'{}\' \
-                 -PcopyMetadata=true -PgeoRegion=\'{}\''.format(
-        GPT_FILE, 2 * os.cpu_count(), infile, outfile, georegion)
+    command = '{} Subset -x -q {} -PcopyMetadata=true ' \
+              '-PgeoRegion=\'{}\' -t \'{}\' \'{}\''.format(
+        GPT_FILE, 2 * os.cpu_count(), georegion, outfile, infile
+    )
 
     # run command and get return code
     return_code = h.run_command(command, logfile)
