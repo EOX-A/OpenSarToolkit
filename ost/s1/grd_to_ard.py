@@ -82,9 +82,9 @@ def grd_to_ard(filelist,
         scenelist = ' '.join(glob.glob(opj(temp_dir, '*imported.dim')))
 
         # create file strings
-        grd_import = opj(temp_dir, '{}_imported'.format(file_id))
+        grd_slice_import = opj(temp_dir, '{}_slices_imported'.format(file_id))
         logfile = opj(output_dir, '{}._slice_assembly.errLog'.format(file_id))
-        return_code = _slice_assembly(scenelist, grd_import, logfile)
+        return_code = _slice_assembly(scenelist, grd_slice_import, logfile)
         
         # delete inputs
         for file in pre_slice_imports:
@@ -92,23 +92,23 @@ def grd_to_ard(filelist,
         
         # delete output if command failed for some reason and return
         if return_code != 0:
-            h.delete_dimap(grd_import)
+            h.delete_dimap(grd_slice_import)
             raise GPTRuntimeError(
                 'Something went wrong with slice assembly/importing'
             )
 
         # subset mode after slice assembly
         if subset:
-            grd_subset = opj(temp_dir, '{}_imported_subset'.format(file_id))
-            return_code = _grd_subset_georegion('{}.dim'.format(grd_import), 
-                                                grd_subset, logfile, subset)
+            grd_import = opj(temp_dir, '{}_imported'.format(file_id))
+            return_code = _grd_subset_georegion('{}.dim'.format(grd_slice_import),
+                                                grd_import, logfile, subset)
 
             # delete slice assembly input to subset
-            h.delete_dimap(grd_import)
+            h.delete_dimap(grd_slice_import)
             
             # delete output if command failed for some reason and return
             if return_code != 0:
-                h.delete_dimap(grd_subset)
+                h.delete_dimap(grd_import)
                 raise GPTRuntimeError('Something went wrong when subsetting')
             
     # single scene case
@@ -131,7 +131,7 @@ def grd_to_ard(filelist,
     
     # ---------------------------------------------------------------------
     # 2 GRD Border Noise
-    if ard['remove_border_noise'] and not subset:
+    if ard['remove_border_noise']:
         for polarisation in ['VV', 'VH', 'HH', 'HV']:
             infile = glob.glob(opj(
                     temp_dir, '{}_imported*data'.format(file_id),
@@ -144,8 +144,7 @@ def grd_to_ard(filelist,
                 _grd_remove_border(infile[0])
 
     # set input for next step
-    if os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id))) or \
-            os.path.isfile(opj(temp_dir, '{}_imported_subset.dim'.format(file_id))):
+    if os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id))):
         infile = glob.glob(opj(temp_dir, '{}_imported*dim'.format(file_id)))[0]
     else:
         logger.info('%s is an empty product', file_id)
