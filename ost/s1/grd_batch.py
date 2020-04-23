@@ -6,6 +6,7 @@ import glob
 import itertools
 import logging
 import gdal
+from retry import retry
 
 from godale import Executor
 
@@ -62,6 +63,7 @@ def _create_processing_dict(inventory_df):
     return dict_scenes
 
 
+@retry(tries=4, delay=5, logger=logger)
 def _execute_grd_batch(
         list_of_scenes,
         inventory_df,
