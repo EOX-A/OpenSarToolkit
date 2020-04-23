@@ -89,11 +89,9 @@ def grd_to_ard_batch(
                                 download_dir=download_dir
                             )
                         ])
-                if (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 80 or \
-                        acq_poly.within(sub_poly):
-                    subset = None
-
-                if not acq_poly.intersects(sub_poly):
+                if acq_poly is None:
+                    subset = subset
+                elif not acq_poly.intersects(sub_poly):
                     for i, row in inventory_df.iterrows():
                         if row.identifier == Sentinel1Scene(scene).scene_id:
                             logger.debug(
@@ -104,6 +102,9 @@ def grd_to_ard_batch(
                             inventory_df.at[i, 'out_ls_mask'] = None
                             if to_tif:
                                 inventory_df.at[i, 'out_tif'] = None
+                elif (acq_poly.intersection(sub_poly).area/acq_poly.area)*100 > 80 or \
+                        acq_poly.within(sub_poly):
+                    subset = None
 
             # get acquisition date
             acquisition_date = Sentinel1Scene(list_of_scenes[0]).start_date
