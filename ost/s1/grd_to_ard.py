@@ -1,9 +1,9 @@
 import os
+import random
 import logging
 import glob
 import shutil
 import time
-import rasterio
 import numpy as np
 import gdal
 from retry import retry
@@ -394,7 +394,7 @@ def grd_to_ard(filelist,
     return return_code, out_final + '.dim', out_ls_mask
 
 
-@retry(tries=3, delay=10, logger=logger)
+@retry(tries=3, delay=random.randint(2, 30), logger=logger)
 def _grd_frame_import(infile,
                       outfile,
                       logfile,
@@ -444,7 +444,7 @@ def _grd_frame_import(infile,
                               )
 
 
-@retry(tries=3, delay=10, logger=logger)
+@retry(tries=3, delay=random.randint(2, 30), logger=logger)
 def _grd_frame_import_subset(infile,
                              outfile,
                              georegion,
@@ -501,7 +501,7 @@ def _grd_frame_import_subset(infile,
                               )
 
 
-@retry(tries=3, delay=10, logger=logger)
+@retry(tries=3, delay=random.randint(2, 30), logger=logger)
 def _slice_assembly(filelist,
                     outfile,
                     logfile,
@@ -543,7 +543,7 @@ def _slice_assembly(filelist,
         )
 
 
-@retry(tries=3, delay=10, logger=logger)
+@retry(tries=3, delay=random.randint(2, 30), logger=logger)
 def _grd_subset(infile, outfile, logfile, region, gpt_max_workers=os.cpu_count()):
     '''A wrapper around SNAP's subset routine
 
