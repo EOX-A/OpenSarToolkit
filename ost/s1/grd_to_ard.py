@@ -63,9 +63,11 @@ def grd_to_ard(filelist,
     
     # slice assembly if more than one scene
     if len(filelist) > 1:
+        pre_slice_imports = []
         for file in filelist:
             grd_import = opj(temp_dir, '{}_imported'.format(
                 os.path.basename(file)[:-5]))
+
             logfile = opj(output_dir, '{}.Import.errLog'.format(
                 os.path.basename(file)[:-5]))
             
@@ -80,11 +82,11 @@ def grd_to_ard(filelist,
                 raise GPTRuntimeError(
                     'Something went wrong with slice assembly/importing'
                 )
+            pre_slice_imports.append(grd_import+'.dim')
 
         # create list of scenes for full acquisition in
         # preparation of slice assembly
-        pre_slice_imports = glob.glob(opj(temp_dir, '*imported.dim'))
-        scenelist = ' '.join(glob.glob(opj(temp_dir, '*imported.dim')))
+        scenelist = ' '.join(pre_slice_imports)
 
         # create file strings
         grd_slice_import = opj(temp_dir, '{}_slices_imported'.format(file_id))
