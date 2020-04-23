@@ -113,10 +113,16 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
                                  stdout=dev_null
                                  )
     else:
-        process = subprocess.run(shlex.split(command),
-                                 stderr=stderr,
-                                 stdout=dev_null
-                                 )
+        # process = subprocess.run(shlex.split(command),
+        #                          stderr=stderr,
+        #                          stdout=dev_null,
+        #                          shell=True,
+        #                          )
+        process = subprocess.Popen(shlex.split(command),
+                                   stderr=stderr,
+                                   stdout=dev_null,
+                                   shell=True,
+                                   )
 
     return_code = process.returncode
 
