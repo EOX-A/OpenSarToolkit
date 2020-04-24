@@ -103,7 +103,7 @@ def _execute_grd_batch(
                     inventory_df.at[i, 'out_ls_mask'] = None
                     if to_tif:
                         inventory_df.at[i, 'out_tif'] = None
-        elif (acq_poly.intersection(sub_poly).area / acq_poly.area) * 100 > 80 or \
+        elif (acq_poly.intersection(sub_poly).area / sub_poly.area) * 100 > 85 or \
                 acq_poly.within(sub_poly):
             subset = None
 
