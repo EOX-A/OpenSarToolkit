@@ -185,7 +185,7 @@ def _execute_grd_batch(
                                 to_db=True
                             )
                         inventory_df.at[i, 'out_tif'] = tif_file
-    return inventory_df
+    return inventory_df, list_of_scenes
 
 
 def grd_to_ard_batch(
@@ -205,7 +205,7 @@ def grd_to_ard_batch(
     for track, allScenes in processing_dict.items():
         for list_of_scenes in processing_dict[track]:
             lists_to_process.append((track, list_of_scenes))
-    executor = Executor(max_workers=int(os.cpu_count()/2),
+    executor = Executor(max_workers=int(os.cpu_count()/4),
                         executor=config_dict['executor_type']
                         )
     for task in executor.as_completed(
@@ -222,7 +222,13 @@ def grd_to_ard_batch(
         ],
     ):
         try:
-            inventory_df = task.result()
+            temp_inv, list_of_scenes = task.result()
+            for i, row in inventory_df.iterrows():
+                for scene in list_of_scenes:
+                    if row.identifier.lower() in scene.lower():
+                        inventory_df.at[i, 'out_dimap'] = temp_inv.at[i, 'out_dimap']
+                        inventory_df.at[i, 'out_ls_mask'] = temp_inv.at[i, 'out_ls_mask']
+                        inventory_df.at[i, 'out_tif'] = temp_inv.at[i, 'out_tif']
         except Exception as e:
             logger.info(e)
     return inventory_df
