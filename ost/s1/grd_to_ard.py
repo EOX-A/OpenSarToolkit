@@ -169,7 +169,7 @@ def grd_to_ard(filelist,
 
     # set input for next step
     if os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id))):
-        infile = glob.glob(opj(temp_dir, '{}_imported*dim'.format(file_id)))[0]
+        infile = os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id)))
     else:
         logger.info('%s is an empty product', file_id)
         return return_code, None, None
