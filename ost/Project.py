@@ -497,8 +497,6 @@ class Sentinel1Batch(Sentinel1):
             product_type, beam_mode, polarisation, username, password,
             log_level
         )
-
-        self.executor_type = 'concurrent_processes'
         # ---------------------------------------
         # 1 Check and set ARD type
         # Adjust the worker ammont based on product type
@@ -540,6 +538,8 @@ class Sentinel1Batch(Sentinel1):
 
         # ---------------------------------------
         # 3 Add cpus_per_process
+        self.executor_type = 'concurrent_processes'
+        self.config_dict['executor_type'] = self.executor_type
         self.config_dict['gpt_max_workers'] = self.gpt_max_workers
         self.config_dict['godale_max_workers'] = self.godale_max_workers
 

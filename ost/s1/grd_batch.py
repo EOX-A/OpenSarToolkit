@@ -103,7 +103,7 @@ def _execute_grd_batch(
                     inventory_df.at[i, 'out_ls_mask'] = None
                     if to_tif:
                         inventory_df.at[i, 'out_tif'] = None
-        elif (acq_poly.intersection(sub_poly).area / sub_poly.area) * 100 > 85 or \
+        elif (acq_poly.intersection(sub_poly).area / acq_poly.area) * 100 > 85 or \
                 acq_poly.within(sub_poly):
             subset = None
 
@@ -201,8 +201,10 @@ def grd_to_ard_batch(
     for track, allScenes in processing_dict.items():
         for list_of_scenes in processing_dict[track]:
             lists_to_process.append((track, list_of_scenes))
-    config_dict['gpt_max_workers'] = int(os.cpu_count()*2)
-    executor = Executor(max_workers=1, executor='billiard')
+    config_dict['gpt_max_workers'] = int(2)
+    executor = Executor(max_workers=int(os.cpu_count()/2),
+                        executor=config_dict['executor_type']
+                        )
     for task in executor.as_completed(
         func=_execute_grd_batch,
         iterable=lists_to_process,
