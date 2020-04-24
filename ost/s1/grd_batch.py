@@ -12,6 +12,7 @@ from godale import Executor
 
 from shapely.wkt import loads
 from shapely.ops import unary_union
+from shapely.geometry import box
 
 from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers import raster as ras
@@ -77,7 +78,8 @@ def _execute_grd_batch(
     track, list_of_scenes = list_of_scenes
     if subset is not None:
         acq_poly = None
-        sub_poly = loads(subset)
+        sub_boudns = loads(subset).bounds
+        sub_poly = box(sub_boudns[0], sub_boudns[1], sub_boudns[2], sub_boudns[3])
         for scene in list_of_scenes:
             if acq_poly is None:
                 acq_poly = Sentinel1Scene(scene).get_product_polygon(
@@ -91,7 +93,7 @@ def _execute_grd_batch(
                     )
                 ])
         if acq_poly is None:
-            subset = subset
+            subset = sub_poly.envelope.wkt
         elif not acq_poly.intersects(sub_poly):
             for i, row in inventory_df.iterrows():
                 if row.identifier == Sentinel1Scene(scene).scene_id:
@@ -106,6 +108,8 @@ def _execute_grd_batch(
         elif (acq_poly.intersection(sub_poly).area / acq_poly.area) * 100 > 85 or \
                 acq_poly.within(sub_poly):
             subset = None
+        else:
+            subset = acq_poly.intersection(sub_poly).envelope.wkt
 
     # get acquisition date
     acquisition_date = Sentinel1Scene(list_of_scenes[0]).start_date
@@ -201,7 +205,6 @@ def grd_to_ard_batch(
     for track, allScenes in processing_dict.items():
         for list_of_scenes in processing_dict[track]:
             lists_to_process.append((track, list_of_scenes))
-    config_dict['gpt_max_workers'] = int(2)
     executor = Executor(max_workers=int(os.cpu_count()/2),
                         executor=config_dict['executor_type']
                         )
