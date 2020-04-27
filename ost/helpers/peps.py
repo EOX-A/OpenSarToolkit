@@ -5,7 +5,6 @@ import os
 import getpass
 import urllib
 import time
-import multiprocessing
 import logging
 
 # import non-standar libes
@@ -222,8 +221,7 @@ def batch_download(inventory_df, download_dir, uname, pword, concurrent=10):
                         download_path, uname, pword])
 
             # parallelised download
-            pool = multiprocessing.Pool(processes=concurrent)
-            pool.map(s1_download, peps_list)
+            s1_download(peps_list)
 
             # routine to check if the file has been downloaded
             for index, row in (

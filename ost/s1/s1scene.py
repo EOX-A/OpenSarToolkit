@@ -20,8 +20,8 @@ import pandas as pd
 import geopandas as gpd
 import requests
 from shapely.wkt import loads
+from shapely.geometry import Polygon, Point
 
-from ost.helpers import helpers as h
 from ost.helpers import scihub, peps, onda, raster as ras
 from ost.s1.grd_to_ard import grd_to_ard
 from ost.s1.burst_batch import bursts_to_ards
@@ -753,14 +753,14 @@ class Sentinel1Scene:
             self.processing_poly = p_poly
             self.center_lat = p_poly.bounds[3]-p_poly.bounds[1]
         else:
-            self.processing_poly = None
+            self.processing_poly = self.get_product_polygon(download_dir=download_dir)
             try:
                 if self.product_type == 'GRD':
                     self.center_lat = self._get_center_lat(filelist[0])
                 else:
                     self.center_lat = self._get_center_lat(filelist)
             except Exception as e:
-                raise
+                raise e
         if float(self.center_lat) > 59 or float(self.center_lat) < -59:
             logger.debug(
                 'INFO: Scene is outside SRTM coverage. Will use 30m ASTER'
@@ -934,3 +934,35 @@ class Sentinel1Scene:
             sums = sums + float(coords.split(',')[0])
 
         return sums / (i + 1)
+
+    def get_product_polygon(self, download_dir, data_mount=None):
+        scene_path = str(self.get_path(download_dir=download_dir, data_mount=data_mount))
+        if scene_path[-4:] == '.zip':
+            zip_archive = zipfile.ZipFile(scene_path)
+            manifest = zip_archive.read('{}.SAFE/manifest.safe'
+                                        .format(self.scene_id))
+        elif scene_path[-5:] == '.SAFE':
+            with open(opj(scene_path, 'manifest.safe'), 'rb') as file:
+                manifest = file.read()
+
+        root = eTree.fromstring(manifest)
+        for child in root:
+            metadata = child.findall('metadataObject')
+            for meta in metadata:
+                for wrap in meta.findall('metadataWrap'):
+                    for data in wrap.findall('xmlData'):
+                        for frameSet in data.findall(
+                                '{http://www.esa.int/safe/sentinel-1.0}frameSet'):
+                            for frame in frameSet.findall(
+                                    '{http://www.esa.int/safe/sentinel-1.0}frame'):
+                                for footprint in frame.findall(
+                                        '{http://www.esa.int/'
+                                        'safe/sentinel-1.0}footPrint'):
+                                    for coords in footprint.findall(
+                                            '{http://www.opengis.net/gml}'
+                                            'coordinates'):
+                                        coordinates = coords.text.split(' ')
+        for i, p in enumerate(coordinates):
+            coordinates[i] = Point(float(p.split(',')[1]), float(p.split(',')[0]))
+        poly = Polygon([[p.x, p.y] for p in coordinates])
+        return poly

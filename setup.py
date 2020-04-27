@@ -28,5 +28,8 @@ setup(
               'Synthetic Aperture Radar'],
     zip_safe=False,
     setup_requires=['pytest-runner'],
-    tests_require=['pytest']
+    tests_require=['pytest'],
+    extras_require={
+        'test': parse_requirements('requirements_test.txt')
+    },
 )

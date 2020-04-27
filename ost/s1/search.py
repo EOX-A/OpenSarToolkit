@@ -372,6 +372,8 @@ def check_availability(inventory_gdf, download_dir, data_mount):
     '''
     from ost.s1.s1scene import Sentinel1Scene
     # add download path, or set to None if not found
+    if 'download_path' not in inventory_gdf.columns:
+        inventory_gdf = inventory_gdf.assign(download_path='')
     for i, row in inventory_gdf.iterrows():
         try:
             inventory_gdf.at[i, 'download_path'] = str(

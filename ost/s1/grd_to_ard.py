@@ -1,9 +1,7 @@
 import os
 import logging
 import glob
-import shutil
 import time
-import rasterio
 import numpy as np
 import gdal
 from retry import retry
@@ -63,53 +61,71 @@ def grd_to_ard(filelist,
     
     # slice assembly if more than one scene
     if len(filelist) > 1:
+        pre_slice_imports = []
         for file in filelist:
             grd_import = opj(temp_dir, '{}_imported'.format(
                 os.path.basename(file)[:-5]))
+
             logfile = opj(output_dir, '{}.Import.errLog'.format(
                 os.path.basename(file)[:-5]))
             
-            return_code = _grd_frame_import(file, grd_import, logfile, polars)
+            return_code = _grd_frame_import(file,
+                                            grd_import,
+                                            logfile,
+                                            polars,
+                                            gpt_max_workers=gpt_max_workers
+                                            )
             if return_code != 0:
                 h.delete_dimap(grd_import)
                 raise GPTRuntimeError(
-                    'Something went wrong with slcie assembly/importing'
+                    'Something went wrong with slice assembly/importing'
                 )
+            pre_slice_imports.append(grd_import+'.dim')
 
         # create list of scenes for full acquisition in
         # preparation of slice assembly
-        scenelist = ' '.join(glob.glob(opj(temp_dir, '*imported.dim')))
+        scenelist = ' '.join(pre_slice_imports)
 
         # create file strings
-        grd_import = opj(temp_dir, '{}_imported'.format(file_id))
+        grd_slice_import = opj(temp_dir, '{}_slices_imported'.format(file_id))
         logfile = opj(output_dir, '{}._slice_assembly.errLog'.format(file_id))
-        return_code = _slice_assembly(scenelist, grd_import, logfile)
+        return_code = _slice_assembly(scenelist,
+                                      grd_slice_import,
+                                      logfile,
+                                      gpt_max_workers=gpt_max_workers
+                                      )
         
         # delete inputs
-        for file in filelist:
-            h.delete_dimap(opj(temp_dir, '{}_imported'.format(
-                os.path.basename(str(file))[:-5])))
+        for file in pre_slice_imports:
+            h.delete_dimap(file.replace('.dim', ''))
         
         # delete output if command failed for some reason and return
         if return_code != 0:
-            h.delete_dimap(grd_import)
+            h.delete_dimap(grd_slice_import)
             raise GPTRuntimeError(
-                'Something went wrong with slcie assembly/importing'
+                'Something went wrong with slice assembly/importing'
             )
 
         # subset mode after slice assembly
-        if subset:
-            grd_subset = opj(temp_dir, '{}_imported_subset'.format(file_id))
-            return_code = _grd_subset_georegion('{}.dim'.format(grd_import), 
-                                                grd_subset, logfile, subset)
-            
+        if subset is not None:
+            grd_import = opj(temp_dir, '{}_imported'.format(file_id))
+            return_code = _grd_subset_georegion('{}.dim'.format(grd_slice_import),
+                                                grd_import,
+                                                logfile,
+                                                subset,
+                                                gpt_max_workers=gpt_max_workers
+                                                )
+
             # delete slice assembly input to subset
-            h.delete_dimap(grd_import)
+            h.delete_dimap(grd_slice_import)
             
             # delete output if command failed for some reason and return
             if return_code != 0:
-                h.delete_dimap(grd_subset)
+                h.delete_dimap(grd_import)
                 raise GPTRuntimeError('Something went wrong when subsetting')
+        else:
+            grd_import = opj(temp_dir, '{}_imported'.format(file_id))
+            h.move_dimap(grd_slice_import, grd_import)
             
     # single scene case
     else:
@@ -117,12 +133,20 @@ def grd_to_ard(filelist,
         logfile = opj(output_dir, '{}.Import.errLog'.format(file_id))
 
         if subset is None:
-            return_code = _grd_frame_import(filelist[0], grd_import, logfile, 
-                                            polars)
+            return_code = _grd_frame_import(filelist[0],
+                                            grd_import,
+                                            logfile,
+                                            polars,
+                                            gpt_max_workers=gpt_max_workers
+                                            )
         else:
-            return_code = _grd_frame_import_subset(filelist[0], grd_import, 
-                                                   subset, logfile, 
-                                                   polars)
+            return_code = _grd_frame_import_subset(filelist[0],
+                                                   grd_import,
+                                                   subset,
+                                                   logfile,
+                                                   polars,
+                                                   gpt_max_workers=gpt_max_workers
+                                                   )
         
         # delete output if command failed for some reason and return
         if return_code != 0:
@@ -131,7 +155,7 @@ def grd_to_ard(filelist,
     
     # ---------------------------------------------------------------------
     # 2 GRD Border Noise
-    if ard['remove_border_noise'] and not subset:
+    if ard['remove_border_noise'] and subset is None:
         for polarisation in ['VV', 'VH', 'HH', 'HV']:
             infile = glob.glob(opj(
                     temp_dir, '{}_imported*data'.format(file_id),
@@ -144,7 +168,11 @@ def grd_to_ard(filelist,
                 _grd_remove_border(infile[0])
 
     # set input for next step
-    infile = glob.glob(opj(temp_dir, '{}_imported*dim'.format(file_id)))[0]
+    if os.path.isfile(opj(temp_dir, '{}_imported.dim'.format(file_id))):
+        infile = opj(temp_dir, '{}_imported.dim'.format(file_id))
+    else:
+        logger.info('%s is an empty product', file_id)
+        return return_code, None, None
     
     # ---------------------------------------------------------------------
     # 3 Calibration
@@ -235,8 +263,7 @@ def grd_to_ard(filelist,
             h.delete_dimap(out_ls_mask)
 
         # move out of temp
-        shutil.move('{}.dim'.format(ls_mask), '{}.dim'.format(out_ls_mask))
-        shutil.move('{}.data'.format(ls_mask), '{}.data'.format(out_ls_mask))
+        h.move_dimap(ls_mask, out_ls_mask)
         
     # ---------------------------------------------------------------------
     # 6 Speckle filtering
@@ -345,8 +372,7 @@ def grd_to_ard(filelist,
     #     raise GPTRuntimeError('Something wrong with the GPT output')
     
     # move to final destination
-    shutil.move('{}.dim'.format(geocoded), '{}.dim'.format(out_final))
-    shutil.move('{}.data'.format(geocoded), '{}.data'.format(out_final))
+    h.move_dimap(geocoded, out_final)
 
     # write processed file to keep track of files already processed
     with open(opj(output_dir, '.processed'), 'w') as file:
@@ -364,8 +390,13 @@ def grd_to_ard(filelist,
     return return_code, out_final + '.dim', out_ls_mask
 
 
-@retry(tries=3, delay=1, logger=logger)
-def _grd_frame_import(infile, outfile, logfile, polarisation='VV,VH,HH,HV'):
+@retry(tries=3, delay=12, logger=logger)
+def _grd_frame_import(infile,
+                      outfile,
+                      logfile,
+                      polarisation='VV,VH,HH,HV',
+                      gpt_max_workers=os.cpu_count()
+                      ):
     '''A wrapper of SNAP import of a single Sentinel-1 GRD product
 
     This function takes an original Sentinel-1 scene (either zip or
@@ -393,7 +424,7 @@ def _grd_frame_import(infile, outfile, logfile, polarisation='VV,VH,HH,HV'):
     # construct command
     command = '{} {} -x -q {} -Pinput=\'{}\' -Ppolarisation={} \
                -Poutput=\'{}\''.format(
-        GPT_FILE, graph, os.cpu_count(), infile, polarisation, outfile)
+        GPT_FILE, graph, 2 * gpt_max_workers, infile, polarisation, outfile)
 
     # run command
     return_code = h.run_command(command, logfile)
@@ -409,12 +440,13 @@ def _grd_frame_import(infile, outfile, logfile, polarisation='VV,VH,HH,HV'):
                               )
 
 
-@retry(tries=3, delay=1, logger=logger)
+@retry(tries=3, delay=12, logger=logger)
 def _grd_frame_import_subset(infile,
                              outfile,
                              georegion,
                              logfile,
-                             polarisation='VV,VH,HH,HV'
+                             polarisation='VV,VH,HH,HV',
+                             gpt_max_workers=os.cpu_count()
                              ):
     '''A wrapper of SNAP import of a subset of single Sentinel-1 GRD product
 
@@ -449,7 +481,7 @@ def _grd_frame_import_subset(infile,
     # construct command
     command = '{} {} -x -q {} -Pinput=\'{}\' -Pregion=\'{}\' -Ppolarisation={} \
                       -Poutput=\'{}\''.format(
-        GPT_FILE, graph, 2 * os.cpu_count(),
+        GPT_FILE, graph, 2 * gpt_max_workers,
         infile, georegion, polarisation, outfile)
 
     # run command and get return code
@@ -465,8 +497,13 @@ def _grd_frame_import_subset(infile,
                               )
 
 
-@retry(tries=3, delay=1, logger=logger)
-def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
+@retry(tries=3, delay=12, logger=logger)
+def _slice_assembly(filelist,
+                    outfile,
+                    logfile,
+                    polarisation='VV,VH,HH,HV',
+                    gpt_max_workers=os.cpu_count()
+                    ):
     '''A wrapper of SNAP's slice assembly routine
 
     This function assembles consecutive frames acquired at the same date.
@@ -486,7 +523,7 @@ def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
     # construct command
     command = '{} SliceAssembly -x -q {} -PselectedPolarisations={} \
                -t \'{}\' {}'.format(
-        GPT_FILE, 2 * os.cpu_count(), polarisation, outfile, filelist)
+        GPT_FILE, 2 * gpt_max_workers, polarisation, outfile, filelist)
 
     # run command and get return code
     return_code = h.run_command(command, logfile)
@@ -502,8 +539,8 @@ def _slice_assembly(filelist, outfile, logfile, polarisation='VV,VH,HH,HV'):
         )
 
 
-@retry(tries=3, delay=1, logger=logger)
-def _grd_subset(infile, outfile, logfile, region):
+@retry(tries=3, delay=12, logger=logger)
+def _grd_subset(infile, outfile, logfile, region, gpt_max_workers=os.cpu_count()):
     '''A wrapper around SNAP's subset routine
 
     This function takes an OST imported frame and subsets it according to
@@ -524,7 +561,7 @@ def _grd_subset(infile, outfile, logfile, region):
 
     # construct command
     command = '{} Subset -x -q {} -Pregion={} -t \'{}\' \'{}\''.format(
-        GPT_FILE, os.cpu_count(), region, outfile, infile)
+        GPT_FILE, 2 * gpt_max_workers, region, outfile, infile)
 
     # run command and get return code
     return_code = h.run_command(command, logfile)
@@ -540,7 +577,12 @@ def _grd_subset(infile, outfile, logfile, region):
 
 
 @retry(tries=3, delay=1, logger=logger)
-def _grd_subset_georegion(infile, outfile, logfile, georegion):
+def _grd_subset_georegion(infile,
+                          outfile,
+                          logfile,
+                          georegion,
+                          gpt_max_workers=os.cpu_count()
+                          ):
     '''A wrapper around SNAP's subset routine
 
     This function takes an OST imported frame and subsets it according to
@@ -560,9 +602,10 @@ def _grd_subset_georegion(infile, outfile, logfile, georegion):
     logger.info('Subsetting imported imagery.')
 
     # extract window from scene
-    command = '{} Subset -x -q {} -Ssource=\'{}\' -t \'{}\' \
-                 -PcopyMetadata=true -PgeoRegion=\'{}\''.format(
-        GPT_FILE, 2 * os.cpu_count(), infile, outfile, georegion)
+    command = '{} Subset -x -q {} -PcopyMetadata=true ' \
+              '-PgeoRegion=\'{}\' -t \'{}\' \'{}\''.format(
+        GPT_FILE, 2 * gpt_max_workers, georegion, outfile, infile
+    )
 
     # run command and get return code
     return_code = h.run_command(command, logfile)

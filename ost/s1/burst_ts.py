@@ -2,7 +2,6 @@ import os
 import json
 import itertools
 import logging
-import multiprocessing as mp
 from pathlib import Path
 
 from ost.helpers import raster as ras
@@ -313,10 +312,8 @@ def mosaic_timeseries(burst_inventory, project_file):
 
         vrt_iter_list.append([ts_dir, product, outfiles])
 
-    concurrent = mp.cpu_count()
-    pool = mp.Pool(processes=concurrent)
-    pool.map(mosaic.mosaic, iter_list)
-    pool.map(mosaic.create_timeseries_mosaic_vrt, vrt_iter_list)
+    mosaic.mosaic(iter_list)
+    mosaic.create_timeseries_mosaic_vrt(vrt_iter_list)
 
 
 def mosaic_timescan(burst_inventory, config_dict):
@@ -362,9 +359,7 @@ def mosaic_timescan(burst_inventory, config_dict):
         outfiles.append(outfile)
         iter_list.append([filelist, outfile, config_dict])
 
-    concurrent = mp.cpu_count()
-    pool = mp.Pool(processes=concurrent)
-    pool.map(mosaic.mosaic, iter_list)
+    mosaic.mosaic(iter_list)
     ras.create_tscan_vrt([tscan_dir, config_dict])
 
 

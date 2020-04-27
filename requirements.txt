@@ -1,7 +1,8 @@
 fiona
 gdal
 godale
-geopandas
+geopandas==0.6.0
+pyproj==1.9.6
 matplotlib
 numpy
 pandas
@@ -12,8 +13,4 @@ scipy
 shapely
 tqdm
 imageio
-joblib
 retry
-pytest
-pytest-cov
-pytest-runner

@@ -44,8 +44,9 @@ def calibration(infile, outfile, logfile, calibrate_to, gpt_max_workers=os.cpu_c
     if return_code == 0:
         logger.info('Calibration to {} successful.'.format(calibrate_to))
     else:
-        print(' ERROR: Calibration exited with an error. \
-                See {} for Snap Error output'.format(logfile))
+        raise GPTRuntimeError(
+            'Calibration exited with an error. See {} for Snap Error output'.format(logfile)
+        )
 
     return return_code
 
@@ -73,8 +74,9 @@ def multi_look(infile, outfile, logfile, rg_looks, az_looks, gpt_max_workers=os.
     if return_code == 0:
         logger.info('Succesfully multi-looked product.')
     else:
-        print(' ERROR: Multi-look exited with an error. \
-                See {} for Snap Error output'.format(logfile))
+        raise GPTRuntimeError(
+            'Multi-look exited with an error. See {} for Snap Error output'.format(logfile)
+        )
 
     return return_code
 
@@ -188,11 +190,13 @@ def terrain_flattening(
             gpt_max_workers=os.cpu_count()
 ):
     command = (
-        '{} Terrain-Flattening -x -q {}'
+        '{} Terrain-Flattening -c 256M -q {}'
         ' -PdemName=\'{}\''
         ' -PdemResamplingMethod=\'{}\''
         ' -PexternalDEMFile=\'{}\''
         ' -PexternalDEMNoDataValue={}'
+        ' -PadditionalOverlap=0.1'
+        ' -PoversamplingMultiple=1.5'
         ' -t \'{}\' \'{}\''.format(
             GPT_FILE,
             2 * gpt_max_workers,
@@ -302,15 +306,19 @@ def ls_mask(infile, outfile, logfile, ard, gpt_max_workers=os.cpu_count()):
     graph = OST_ROOT.joinpath('graphs/S1_GRD2ARD/3_LSmap.xml')
     dem_dict = ard['dem']
 
+    # ls_mask acceleration, image resampling nearest, resolution 3x
+    image_resampling = 'NEAREST_NEIGHBOUR'
+    image_resolution = ard["resolution"] * 3
+
     command = (
         f'{GPT_FILE} {graph} -x -q {2 * gpt_max_workers} '
         f'-Pinput=\'{infile}\' '
-        f'-Presol={ard["resolution"]} '
+        f'-Presol={image_resolution} '
         f'-Pdem=\'{dem_dict["dem_name"]}\' '
         f'-Pdem_file=\'{dem_dict["dem_file"]}\' '
         f'-Pdem_nodata=\'{dem_dict["dem_nodata"]}\' '
         f'-Pdem_resampling=\'{dem_dict["dem_resampling"]}\' '
-        f'-Pimage_resampling=\'{dem_dict["image_resampling"]}\' '
+        f'-Pimage_resampling=\'{image_resampling}\' '
         f'-Pegm_correction=\'{str(dem_dict["egm_correction"]).lower()}\' '
         f'-Poutput=\'{outfile}\''
     )

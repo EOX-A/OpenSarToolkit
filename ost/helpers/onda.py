@@ -1,16 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
-'''
-This module provides functions for downloading data from
-ONDA Dias server.
-'''
-
 import os
 from os.path import join as opj
 import glob
 import getpass
-import multiprocessing
 import urllib
 import requests
 import tqdm
@@ -223,8 +214,7 @@ def batch_download(inventory_df, download_dir, uname, pword, concurrent=2):
                 download_list.append([uuid[0], filepath, uname, pword])
 
         if download_list:
-            pool = multiprocessing.Pool(processes=concurrent)
-            pool.map(s1_download, download_list)
+            s1_download(download_list)
                     
         downloaded_scenes = glob.glob(
             opj(download_dir, 'SAR', '*', '20*', '*', '*',

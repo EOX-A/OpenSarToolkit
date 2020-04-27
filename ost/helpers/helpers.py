@@ -100,6 +100,7 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
 
     currtime = time.time()
 
+    logger.debug('Following command will be executed: %s', command)
     if silent:
         dev_null = open(os.devnull, 'w')
         stderr = subprocess.PIPE
@@ -112,14 +113,14 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
                                  stderr=stderr,
                                  stdout=dev_null
                                  )
+
     else:
-        process = subprocess.run(shlex.split(command),
-                                 stderr=stderr,
-                                 stdout=dev_null
-                                 )
-
+        process = subprocess.run(
+            shlex.split(command),
+            stderr=stderr,
+            stdout=dev_null
+        )
     return_code = process.returncode
-
     if return_code != 0 and logfile is not None and process.stderr is not None:
         with open(str(logfile), 'w') as file:
             for line in process.stderr.decode().splitlines():
@@ -128,7 +129,7 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
     if elapsed:
         timer(currtime)
 
-    return process.returncode
+    return return_code
 
 
 def delete_dimap(dimap_prefix):

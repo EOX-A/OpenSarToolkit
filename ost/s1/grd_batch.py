@@ -6,6 +6,13 @@ import glob
 import itertools
 import logging
 import gdal
+from retry import retry
+
+from godale import Executor
+
+from shapely.wkt import loads
+from shapely.ops import unary_union
+from shapely.geometry import box
 
 from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers import raster as ras
@@ -57,6 +64,130 @@ def _create_processing_dict(inventory_df):
     return dict_scenes
 
 
+@retry(tries=4, delay=5, logger=logger)
+def _execute_grd_batch(
+        list_of_scenes,
+        inventory_df,
+        download_dir,
+        processing_dir,
+        temp_dir,
+        config_dict,
+        subset=None,
+        to_tif=False,
+        ):
+    track, list_of_scenes = list_of_scenes
+    if subset is not None:
+        acq_poly = None
+        sub_boudns = loads(subset).bounds
+        sub_poly = box(sub_boudns[0], sub_boudns[1], sub_boudns[2], sub_boudns[3])
+        for scene in list_of_scenes:
+            if acq_poly is None:
+                acq_poly = Sentinel1Scene(scene).get_product_polygon(
+                    download_dir=download_dir
+                )
+            else:
+                acq_poly = unary_union([
+                    acq_poly,
+                    Sentinel1Scene(scene).get_product_polygon(
+                        download_dir=download_dir
+                    )
+                ])
+        if acq_poly is None:
+            subset = sub_poly.envelope.wkt
+        elif not acq_poly.intersects(sub_poly):
+            for i, row in inventory_df.iterrows():
+                if row.identifier == Sentinel1Scene(scene).scene_id:
+                    logger.debug(
+                        'Scene does not intersect the subset %s',
+                        Sentinel1Scene(scene).scene_id
+                    )
+                    inventory_df.at[i, 'out_dimap'] = None
+                    inventory_df.at[i, 'out_ls_mask'] = None
+                    if to_tif:
+                        inventory_df.at[i, 'out_tif'] = None
+        elif (acq_poly.intersection(sub_poly).area / acq_poly.area) * 100 > 85 or \
+                acq_poly.within(sub_poly):
+            subset = None
+        else:
+            subset = acq_poly.intersection(sub_poly).envelope.wkt
+
+    # get acquisition date
+    acquisition_date = Sentinel1Scene(list_of_scenes[0]).start_date
+    # create a subdirectory baed on acq. date
+    out_dir = opj(processing_dir, track, acquisition_date)
+    os.makedirs(out_dir, exist_ok=True)
+
+    file_id = '{}_{}'.format(acquisition_date, track)
+    out_file = opj(out_dir, '{}_BS.dim'.format(file_id))
+    out_ls_mask = opj(out_dir, '{}_LS.gpkg'.format(file_id))
+    tif_file = out_file.replace('.dim', '.tif')
+
+    # check if already processed
+    if os.path.isfile(opj(out_dir, '.processed')):
+        logger.info(
+            'Acquisition from {} of track {}'
+            ' already processed'.format(acquisition_date, track)
+        )
+        for i, row in inventory_df.iterrows():
+            for s in list_of_scenes:
+                if row.identifier == Sentinel1Scene(s).scene_id:
+                    if os.path.isfile(out_file):
+                        inventory_df.at[i, 'out_dimap'] = out_file
+                    else:
+                        inventory_df.at[i, 'out_dimap'] = None
+
+                    if os.path.isfile(out_ls_mask):
+                        inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
+                    else:
+                        inventory_df.at[i, 'out_ls_mask'] = None
+
+                    if to_tif and not os.path.isfile(tif_file) and \
+                            os.path.isfile(out_file):
+                        ard_to_rgb(
+                            infile=out_file,
+                            outfile=tif_file,
+                            driver='GTiff',
+                            to_db=True
+                        )
+                        inventory_df.at[i, 'out_tif'] = tif_file
+                    elif to_tif and os.path.isfile(tif_file):
+                        inventory_df.at[i, 'out_tif'] = tif_file
+                    else:
+                        inventory_df.at[i, 'out_tif'] = None
+    else:
+        # get the paths to the file
+        scene_paths = ([
+            Sentinel1Scene(i).get_path(download_dir=download_dir)
+            for i in list_of_scenes
+        ])
+
+        # apply the grd_to_ard function
+        return_code, out_file, out_ls_mask = grd_to_ard(
+            scene_paths,
+            out_dir,
+            file_id,
+            temp_dir,
+            ard_params=config_dict['processing'],
+            subset=subset,
+            gpt_max_workers=config_dict['gpt_max_workers']
+        )
+        for i, row in inventory_df.iterrows():
+            for s in list_of_scenes:
+                if row.identifier == Sentinel1Scene(s).scene_id:
+                    inventory_df.at[i, 'out_dimap'] = out_file
+                    inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
+                    if to_tif and out_file is not None:
+                        if not os.path.exists(tif_file):
+                            ard_to_rgb(
+                                infile=out_file,
+                                outfile=tif_file,
+                                driver='GTiff',
+                                to_db=True
+                            )
+                        inventory_df.at[i, 'out_tif'] = tif_file
+    return inventory_df, list_of_scenes
+
+
 def grd_to_ard_batch(
         inventory_df,
         download_dir,
@@ -66,85 +197,40 @@ def grd_to_ard_batch(
         subset=None,
         to_tif=False,
 ):
+    # Where all combinations are stored for parallel processing
+    lists_to_process = []
     # where all frames are grouped into acquisitions
     processing_dict = _create_processing_dict(inventory_df)
 
     for track, allScenes in processing_dict.items():
         for list_of_scenes in processing_dict[track]:
-            # get acquisition date
-            acquisition_date = Sentinel1Scene(list_of_scenes[0]).start_date
-            # create a subdirectory baed on acq. date
-            out_dir = opj(processing_dir, track, acquisition_date)
-            os.makedirs(out_dir, exist_ok=True)
-
-            file_id = '{}_{}'.format(acquisition_date, track)
-            out_file = opj(out_dir, '{}_BS.dim'.format(file_id))
-            out_ls_mask = opj(out_dir, '{}_LS.gpkg'.format(file_id))
-            tif_file = out_file.replace('.dim', '.tif')
-
-            # check if already processed
-            if os.path.isfile(opj(out_dir, '.processed')):
-                logger.info(
-                    'Acquisition from {} of track {}'
-                    ' already processed'.format(acquisition_date, track)
-                )
-                for i, row in inventory_df.iterrows():
-                    for s in list_of_scenes:
-                        if row.identifier == Sentinel1Scene(s).scene_id:
-                            if os.path.isfile(out_file):
-                                inventory_df.at[i, 'out_dimap'] = out_file
-                            else:
-                                inventory_df.at[i, 'out_dimap'] = None
-
-                            if os.path.isfile(out_ls_mask):
-                                inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
-                            else:
-                                inventory_df.at[i, 'out_ls_mask'] = None
-
-                            if to_tif and not os.path.isfile(tif_file) and \
-                                    os.path.isfile(out_file):
-                                ard_to_rgb(
-                                    infile=out_file,
-                                    outfile=tif_file,
-                                    driver='GTiff',
-                                    to_db=True
-                                    )
-                                inventory_df.at[i, 'out_tif'] = tif_file
-                            elif to_tif and os.path.isfile(tif_file):
-                                inventory_df.at[i, 'out_tif'] = tif_file
-                            else:
-                                inventory_df.at[i, 'out_tif'] = None
-            else:
-                # get the paths to the file
-                scene_paths = ([
-                    Sentinel1Scene(i).get_path(download_dir=download_dir)
-                    for i in list_of_scenes
-                ])
-
-                # apply the grd_to_ard function
-                return_code, out_file, out_ls_mask = grd_to_ard(
-                    scene_paths,
-                    out_dir,
-                    file_id,
-                    temp_dir,
-                    ard_params=config_dict['processing'],
-                    subset=subset,
-                    gpt_max_workers=config_dict['gpt_max_workers']
-                    )
-                for i, row in inventory_df.iterrows():
-                    for s in list_of_scenes:
-                        if row.identifier == Sentinel1Scene(s).scene_id:
-                            inventory_df.at[i, 'out_dimap'] = out_file
-                            inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
-                            if to_tif:
-                                ard_to_rgb(
-                                    infile=out_file,
-                                    outfile=tif_file,
-                                    driver='GTiff',
-                                    to_db=True
-                                )
-                                inventory_df.at[i, 'out_tif'] = tif_file
-
+            lists_to_process.append((track, list_of_scenes))
+    executor = Executor(max_workers=int(os.cpu_count()/4),
+                        executor=config_dict['executor_type']
+                        )
+    for task in executor.as_completed(
+        func=_execute_grd_batch,
+        iterable=lists_to_process,
+        fargs=[
+            inventory_df,
+            download_dir,
+            processing_dir,
+            temp_dir,
+            config_dict,
+            subset,
+            to_tif
+        ],
+    ):
+        try:
+            temp_inv, list_of_scenes = task.result()
+            for i, row in inventory_df.iterrows():
+                for scene in list_of_scenes:
+                    if row.identifier.lower() in scene.lower():
+                        inventory_df.at[i, 'out_dimap'] = temp_inv.at[i, 'out_dimap']
+                        inventory_df.at[i, 'out_ls_mask'] = temp_inv.at[i, 'out_ls_mask']
+                        inventory_df.at[i, 'out_tif'] = temp_inv.at[i, 'out_tif']
+        except Exception as e:
+            logger.info(e)
     return inventory_df
 
 
