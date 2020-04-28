@@ -5,6 +5,11 @@ import numpy as np
 from os.path import join as opj
 from tempfile import TemporaryDirectory
 
+try:
+    from cPickle import dumps
+except ImportError:
+    from pickle import dumps
+
 import rasterio
 from rasterio.merge import merge
 from rasterio.enums import Resampling
@@ -137,14 +142,8 @@ def ard_slc_to_rgb(
     return outfile
 
 
-def _execute_dual_pol_tif(window, co, cr, dst, to_db=False):
-    i, window = window
-    # loop through blocks
-    from rasterio.enums import Resampling
-
-    # read arrays and turn to dB (in case it isn't)
-    co_array = co.read(window=window, resampling=Resampling.cubic_spline)
-    cr_array = cr.read(window=window, resampling=Resampling.cubic_spline)
+def _execute_dual_pol_tif(pols_data, to_db=False):
+    window, co_array, cr_array = pols_data
     if to_db:
         # turn to db
         co_array = ras.convert_to_db(co_array)
@@ -159,12 +158,8 @@ def _execute_dual_pol_tif(window, co, cr, dst, to_db=False):
     cr_array[cr_array == 0] = 0
     # create log ratio by subtracting the dbs
     ratio_array = np.subtract(co_array, cr_array)
-    # write file
-    for k, arr in [(1, co_array),
-                   (2, cr_array),
-                   (3, ratio_array)
-                   ]:
-        dst.write(arr[0, ], indexes=k, window=window)
+
+    return co_array, cr_array, ratio_array, window
 
 
 def ard_to_rgb(
@@ -172,7 +167,7 @@ def ard_to_rgb(
         outfile,
         driver='GTiff',
         to_db=True,
-        executor_type='concurrent_processes',
+        executor_type='concurrent_threads',
         max_workers=os.cpu_count()
 ):
     if not isinstance(infile, str):
@@ -203,14 +198,31 @@ def ard_to_rgb(
         # update meta
         meta.update(driver=driver, count=3, nodata=0, compress='Deflate')
         # !assure that dimensions match ####
-        with rasterio.open(outfile, 'w', **meta) as dst:
+        with rasterio.open(outfile, 'w+', **meta) as dst:
+            windows = [window for ij, window in dst.block_windows()]
+            pol_1data = (co.read(window=window, resampling=Resampling.cubic_spline)
+                         for window in windows
+                         )
+            pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
+                         for window in windows
+                         )
+            pol_data = []
+            for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
+                pol_data.append((w, arr1, arr2))
+            dumps(pol_data)
             executor = Executor(executor=executor_type, max_workers=max_workers)
             for task in executor.as_completed(
                 func=_execute_dual_pol_tif,
-                iterable=co.block_windows(1),
-                fargs=[co, cr, dst, to_db],
+                iterable=pol_data,
+                fargs=[to_db],
             ):
-                task.result()
+                co_array, cr_array, ratio_array, window = task.result()
+                # write file
+                for k, arr in [(1, co_array),
+                               (2, cr_array),
+                               (3, ratio_array)
+                               ]:
+                    dst.write(arr[0,], indexes=k, window=window)
 
 
 def ard_slc_to_thumbnail(
