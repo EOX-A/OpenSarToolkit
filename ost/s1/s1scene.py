@@ -858,8 +858,11 @@ class Sentinel1Scene:
             to_db = True
         if self.product_type == 'GRD':
             self.processing_poly = None
-            print(self.ard_dimap['bs'])
-            ard_to_rgb(self.ard_dimap['bs'], outfile, driver, to_db)
+            ard_to_rgb(infile=self.ard_dimap['bs'],
+                       outfiles=[outfile, None],
+                       driver=driver,
+                       to_db=to_db
+                       )
         elif self.product_type == 'SLC':
             if process_bounds is None:
                 process_bounds = self.processing_poly.bounds
