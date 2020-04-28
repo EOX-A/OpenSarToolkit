@@ -9,7 +9,7 @@ import rasterio
 from rasterio.merge import merge
 from rasterio.enums import Resampling
 
-from godale._concurrent import Executor
+from godale import Executor
 
 from ost.helpers import raster as ras
 from ost.helpers.settings import GTIFF_OST_PROFILE
@@ -137,11 +137,43 @@ def ard_slc_to_rgb(
     return outfile
 
 
+def _execute_dual_pol_tif(window, co, cr, dst, to_db=False):
+    i, window = window
+    # loop through blocks
+    from rasterio.enums import Resampling
+
+    # read arrays and turn to dB (in case it isn't)
+    co_array = co.read(window=window, resampling=Resampling.cubic_spline)
+    cr_array = cr.read(window=window, resampling=Resampling.cubic_spline)
+    if to_db:
+        # turn to db
+        co_array = ras.convert_to_db(co_array)
+        cr_array = ras.convert_to_db(cr_array)
+
+        # adjust for dbconversion
+        co_array[co_array == -130] = 0
+        cr_array[cr_array == -130] = 0
+
+    # turn 0s to nan
+    co_array[co_array == 0] = 0
+    cr_array[cr_array == 0] = 0
+    # create log ratio by subtracting the dbs
+    ratio_array = np.subtract(co_array, cr_array)
+    # write file
+    for k, arr in [(1, co_array),
+                   (2, cr_array),
+                   (3, ratio_array)
+                   ]:
+        dst.write(arr[0, ], indexes=k, window=window)
+
+
 def ard_to_rgb(
         infile,
         outfile,
         driver='GTiff',
-        to_db=True
+        to_db=True,
+        executor_type='concurrent_processes',
+        max_workers=os.cpu_count()
 ):
     if not isinstance(infile, str):
         infile = str(infile)
@@ -164,38 +196,21 @@ def ard_to_rgb(
 
     # !!!!assure and both pols exist!!!
     with rasterio.open(co_pol) as co,  rasterio.open(cross_pol) as cr:
+        if co.shape != cr.shape:
+            logger.debug('dimensions do not match')
         # get meta data
         meta = co.meta
         # update meta
         meta.update(driver=driver, count=3, nodata=0, compress='Deflate')
         # !assure that dimensions match ####
         with rasterio.open(outfile, 'w', **meta) as dst:
-            if co.shape != cr.shape:
-                logger.debug('dimensions do not match')
-            # loop through blocks
-            for i, window in co.block_windows(1):
-                from rasterio.enums import Resampling
-                # read arrays and turn to dB (in case it isn't)
-                co_array = co.read(window=window, resampling=Resampling.cubic_spline)
-                cr_array = cr.read(window=window, resampling=Resampling.cubic_spline)
-                if to_db:
-                    # turn to db
-                    co_array = ras.convert_to_db(co_array)
-                    cr_array = ras.convert_to_db(cr_array)
-
-                    # adjust for dbconversion
-                    co_array[co_array == -130] = 0
-                    cr_array[cr_array == -130] = 0
-
-                # turn 0s to nan
-                co_array[co_array == 0] = 0
-                cr_array[cr_array == 0] = 0
-                # create log ratio by subtracting the dbs
-                ratio_array = np.subtract(co_array, cr_array)
-                # write file
-                for k, arr in [(1, co_array), (2, cr_array),
-                               (3, ratio_array)]:
-                    dst.write(arr[0, ], indexes=k, window=window)
+            executor = Executor(executor=executor_type, max_workers=max_workers)
+            for task in executor.as_completed(
+                func=_execute_dual_pol_tif,
+                iterable=co.block_windows(1),
+                fargs=[co, cr, dst, to_db],
+            ):
+                task.result()
 
 
 def ard_slc_to_thumbnail(

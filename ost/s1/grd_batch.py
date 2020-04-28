@@ -147,7 +147,9 @@ def _execute_grd_batch(
                             infile=out_file,
                             outfile=tif_file,
                             driver='GTiff',
-                            to_db=True
+                            to_db=True,
+                            executor_type=config_dict['executor_type'],
+                            max_workers=os.cpu_count()
                         )
                         inventory_df.at[i, 'out_tif'] = tif_file
                     elif to_tif and os.path.isfile(tif_file):
