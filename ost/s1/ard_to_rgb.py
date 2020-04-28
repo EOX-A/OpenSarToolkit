@@ -5,11 +5,6 @@ import numpy as np
 from os.path import join as opj
 from tempfile import TemporaryDirectory
 
-try:
-    from cPickle import dumps
-except ImportError:
-    from pickle import dumps
-
 import rasterio
 from rasterio.merge import merge
 from rasterio.enums import Resampling
@@ -153,6 +148,10 @@ def _execute_dual_pol_tif(pols_data, to_db=False):
         co_array[co_array == -130] = 0
         cr_array[cr_array == -130] = 0
 
+        # remove resampling border artifacts
+        cr_array[cr_array <= -40] = 0
+        cr_array[cr_array <= -40] = 0
+
     # turn 0s to nan
     co_array[co_array == 0] = 0
     cr_array[cr_array == 0] = 0
@@ -164,11 +163,12 @@ def _execute_dual_pol_tif(pols_data, to_db=False):
 
 def ard_to_rgb(
         infile,
-        outfile,
+        outfiles,
         driver='GTiff',
         to_db=True,
         executor_type='concurrent_threads',
-        max_workers=os.cpu_count()
+        max_workers=os.cpu_count(),
+        single_band_tifs=False,
 ):
     if not isinstance(infile, str):
         infile = str(infile)
@@ -191,38 +191,68 @@ def ard_to_rgb(
 
     # !!!!assure and both pols exist!!!
     with rasterio.open(co_pol) as co,  rasterio.open(cross_pol) as cr:
+        # !assure that dimensions match ####
         if co.shape != cr.shape:
             logger.debug('dimensions do not match')
         # get meta data
         meta = co.meta
         # update meta
-        meta.update(driver=driver, count=3, nodata=0, compress='Deflate')
-        # !assure that dimensions match ####
-        with rasterio.open(outfile, 'w+', **meta) as dst:
-            windows = [window for ij, window in dst.block_windows()]
-            pol_1data = (co.read(window=window, resampling=Resampling.cubic_spline)
-                         for window in windows
-                         )
-            pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
-                         for window in windows
-                         )
-            pol_data = []
-            for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
-                pol_data.append((w, arr1, arr2))
-            dumps(pol_data)
-            executor = Executor(executor=executor_type, max_workers=max_workers)
-            for task in executor.as_completed(
-                func=_execute_dual_pol_tif,
-                iterable=pol_data,
-                fargs=[to_db],
-            ):
-                co_array, cr_array, ratio_array, window = task.result()
-                # write file
-                for k, arr in [(1, co_array),
-                               (2, cr_array),
-                               (3, ratio_array)
-                               ]:
-                    dst.write(arr[0,], indexes=k, window=window)
+
+        if single_band_tifs:
+            outfile_vv = outfiles[0]
+            outfile_vh = outfiles[1]
+            meta.update(driver=driver, count=1, nodata=0, compress='Deflate')
+            with rasterio.open(outfile_vv, 'w+', **meta) as dst_vv, \
+                    rasterio.open(outfile_vh, 'w+', **meta) as dst_vh:
+                windows = [window for ij, window in dst_vv.block_windows()]
+                pol_1data = (co.read(window=window, resampling=Resampling.cubic_spline)
+                             for window in windows
+                             )
+                pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
+                             for window in windows
+                             )
+                pol_data = []
+                for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
+                    pol_data.append((w, arr1, arr2))
+                executor = Executor(executor=executor_type, max_workers=max_workers)
+                for task in executor.as_completed(
+                    func=_execute_dual_pol_tif,
+                    iterable=pol_data,
+                    fargs=[to_db],
+                ):
+                    co_array, cr_array, ratio_array, window = task.result()
+                    dst_vv.write(co_array[0,], indexes=1, window=window)
+                    dst_vh.write(cr_array[0,], indexes=1, window=window)
+            return outfile_vv, outfile_vh
+        else:
+            outfile = outfiles[0]
+            out_vh = None
+            meta.update(driver=driver, count=3, nodata=0, compress='Deflate')
+            with rasterio.open(outfile, 'w+', **meta) as dst:
+                windows = [window for ij, window in dst.block_windows()]
+                pol_1data = (co.read(window=window, resampling=Resampling.cubic_spline)
+                             for window in windows
+                             )
+                pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
+                             for window in windows
+                             )
+                pol_data = []
+                for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
+                    pol_data.append((w, arr1, arr2))
+                executor = Executor(executor=executor_type, max_workers=max_workers)
+                for task in executor.as_completed(
+                    func=_execute_dual_pol_tif,
+                    iterable=pol_data,
+                    fargs=[to_db],
+                ):
+                    co_array, cr_array, ratio_array, window = task.result()
+                    # write file
+                    for k, arr in [(1, co_array),
+                                   (2, cr_array),
+                                   (3, ratio_array)
+                                   ]:
+                        dst.write(arr[0,], indexes=k, window=window)
+                return outfile, out_vh
 
 
 def ard_slc_to_thumbnail(

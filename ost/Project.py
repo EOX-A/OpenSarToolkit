@@ -620,6 +620,7 @@ class Sentinel1Batch(Sentinel1):
             mosaic=False,
             overwrite=False,
             to_tif=False,
+            single_band_tifs=False,
     ):
         self.update_ard_parameters()
 
@@ -636,6 +637,7 @@ class Sentinel1Batch(Sentinel1):
             config_dict=self.config_dict,
             subset=self.aoi,
             to_tif=to_tif,
+            single_band_tifs=single_band_tifs,
             )
 
         # time-series part

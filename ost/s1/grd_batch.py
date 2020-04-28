@@ -74,6 +74,7 @@ def _execute_grd_batch(
         config_dict,
         subset=None,
         to_tif=False,
+        single_band_tifs=False,
         ):
     track, list_of_scenes = list_of_scenes
     if subset is not None:
@@ -120,7 +121,12 @@ def _execute_grd_batch(
     file_id = '{}_{}'.format(acquisition_date, track)
     out_file = opj(out_dir, '{}_BS.dim'.format(file_id))
     out_ls_mask = opj(out_dir, '{}_LS.gpkg'.format(file_id))
-    tif_file = out_file.replace('.dim', '.tif')
+    if single_band_tifs:
+        out_vv = out_file.replace('.dim', '_VV.tif')
+        out_vh = out_file.replace('.dim', '_VH.tif')
+    else:
+        out_vv = out_file.replace('.dim', '.tif')
+        out_vh = None
 
     # check if already processed
     if os.path.isfile(opj(out_dir, '.processed')):
@@ -141,21 +147,34 @@ def _execute_grd_batch(
                     else:
                         inventory_df.at[i, 'out_ls_mask'] = None
 
-                    if to_tif and not os.path.isfile(tif_file) and \
+                    if to_tif and not os.path.isfile(out_vv) and \
                             os.path.isfile(out_file):
-                        ard_to_rgb(
+                        out_vv, out_vh = ard_to_rgb(
                             infile=out_file,
-                            outfile=tif_file,
+                            outfiles=[out_vv, out_vh],
                             driver='GTiff',
                             to_db=True,
                             executor_type=config_dict['executor_type'],
-                            max_workers=os.cpu_count()
+                            max_workers=os.cpu_count(),
+                            single_band_tifs=single_band_tifs,
                         )
-                        inventory_df.at[i, 'out_tif'] = tif_file
-                    elif to_tif and os.path.isfile(tif_file):
-                        inventory_df.at[i, 'out_tif'] = tif_file
+                        if single_band_tifs:
+                            inventory_df.at[i, 'out_vv'] = out_vv
+                            inventory_df.at[i, 'out_vh'] = out_vh
+                        else:
+                            inventory_df.at[i, 'out_tif'] = out_vv
+                    elif to_tif and os.path.isfile(out_vv):
+                        if single_band_tifs:
+                            inventory_df.at[i, 'out_vv'] = out_vv
+                            inventory_df.at[i, 'out_vh'] = out_vh
+                        else:
+                            inventory_df.at[i, 'out_tif'] = out_vv
                     else:
-                        inventory_df.at[i, 'out_tif'] = None
+                        if single_band_tifs:
+                            inventory_df.at[i, 'out_vv'] = None
+                            inventory_df.at[i, 'out_vh'] = None
+                        else:
+                            inventory_df.at[i, 'out_tif'] = None
     else:
         # get the paths to the file
         scene_paths = ([
@@ -179,14 +198,21 @@ def _execute_grd_batch(
                     inventory_df.at[i, 'out_dimap'] = out_file
                     inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
                     if to_tif and out_file is not None:
-                        if not os.path.exists(tif_file):
-                            ard_to_rgb(
+                        if not os.path.exists(out_vv):
+                            out_vv, out_vh = ard_to_rgb(
                                 infile=out_file,
-                                outfile=tif_file,
+                                outfiles=[out_vv, out_vh],
                                 driver='GTiff',
-                                to_db=True
+                                to_db=True,
+                                executor_type=config_dict['executor_type'],
+                                max_workers=os.cpu_count(),
+                                single_band_tifs=single_band_tifs,
                             )
-                        inventory_df.at[i, 'out_tif'] = tif_file
+                        if single_band_tifs:
+                            inventory_df.at[i, 'out_vv'] = out_vv
+                            inventory_df.at[i, 'out_vh'] = out_vh
+                        else:
+                            inventory_df.at[i, 'out_tif'] = out_vv
     return inventory_df, list_of_scenes
 
 
@@ -198,6 +224,7 @@ def grd_to_ard_batch(
         config_dict,
         subset=None,
         to_tif=False,
+        single_band_tifs=False,
 ):
     # Where all combinations are stored for parallel processing
     lists_to_process = []
@@ -220,7 +247,8 @@ def grd_to_ard_batch(
             temp_dir,
             config_dict,
             subset,
-            to_tif
+            to_tif,
+            single_band_tifs
         ],
     ):
         try:
@@ -230,9 +258,14 @@ def grd_to_ard_batch(
                     if row.identifier.lower() in scene.lower():
                         inventory_df.at[i, 'out_dimap'] = temp_inv.at[i, 'out_dimap']
                         inventory_df.at[i, 'out_ls_mask'] = temp_inv.at[i, 'out_ls_mask']
-                        inventory_df.at[i, 'out_tif'] = temp_inv.at[i, 'out_tif']
+                        if single_band_tifs:
+                            inventory_df.at[i, 'out_vv'] = temp_inv.at[i, 'out_vv']
+                            inventory_df.at[i, 'out_vh'] = temp_inv.at[i, 'out_vh']
+                        else:
+                            inventory_df.at[i, 'out_tif'] = temp_inv.at[i, 'out_tif']
         except Exception as e:
             logger.info(e)
+            raise e
     return inventory_df
 
 
