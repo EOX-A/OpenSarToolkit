@@ -79,7 +79,8 @@ def create_backscatter_layers(
         import_file,
         out_dir,
         burst_prefix,
-        config_dict
+        config_dict,
+        region=''
 ):
     """
 
@@ -115,7 +116,7 @@ def create_backscatter_layers(
             out_cal,
             cal_log,
             ard,
-            region='',
+            region=region,
             gpt_max_workers=gpt_max_workers
         )
 
@@ -331,6 +332,7 @@ def burst_to_ard(burst, config_dict):
     master_file = burst['file_location']
     master_burst_nr = burst['BurstNr']
     swath = burst['SwathID']
+    region = burst.geometry
 
     # check if we need to produce coherence
     if ard['coherence']:
@@ -408,7 +410,11 @@ def burst_to_ard(burst, config_dict):
 
         if ard['backscatter'] and not bs_file.exists():
             out_bs, out_ls = create_backscatter_layers(
-                f'{master_import}.dim', out_dir, master_prefix, config_dict
+                f'{master_import}.dim',
+                out_dir,
+                master_prefix,
+                config_dict,
+                region=region
             )
             # write out check file for tracking that it is processed
             if out_bs is not None:

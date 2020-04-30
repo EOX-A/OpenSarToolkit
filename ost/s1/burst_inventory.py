@@ -232,7 +232,7 @@ def get_bursts_by_polygon(burst_inv, out_poly=None):
             b = shapely.wkt.loads(str(row.geometry))
             if b.intersects(out_poly):
                 b_bounds = row.geometry.bounds
-                burst_buffer = abs(out_poly.bounds[2]-out_poly.bounds[0])/75
+                burst_buffer = abs(b_bounds[2]-b_bounds[0])/6
                 burst_bbox = box(
                     b_bounds[0], b_bounds[1], b_bounds[2], b_bounds[3]
                 ).buffer(burst_buffer).envelope
