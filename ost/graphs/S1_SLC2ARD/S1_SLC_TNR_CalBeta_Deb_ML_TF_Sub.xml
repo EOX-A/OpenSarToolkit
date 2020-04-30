@@ -94,7 +94,7 @@
   <node id="Write">
     <operator>Write</operator>
     <sources>
-      <sourceProduct refid="Subset"/>
+      <sourceProduct refid="Terrain-Flattening"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <file>${output}</file>
