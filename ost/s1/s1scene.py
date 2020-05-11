@@ -68,7 +68,30 @@ class Sentinel1Scene:
         self.rel_orbit = (((int(self.abs_orbit)
                             - int(self.orbit_offset)) % 175) + 1)
 
-        # get acquisition mode
+        # Get polarisations
+        self.polarisation_list = []
+        if self.pol_mode == 'SH':
+            self.polarisation_list = ['HH']
+        elif self.pol_mode == 'SV':
+            self.polarisation_list = ['VV']
+        elif self.pol_mode == 'DH':
+            self.polarisation_list = ['HH', 'HV']
+        elif self.pol_mode == 'DV':
+            self.polarisation_list = ['VV', 'VH']
+        elif self.pol_mode == 'HH':
+            self.polarisation_list = ['HH']
+        elif self.pol_mode == 'HV':
+            self.polarisation_list = ['HV']
+        elif self.pol_mode == 'VV':
+            self.polarisation_list = ['VV']
+        elif self.pol_mode == 'VH':
+            self.polarisation_list = ['VH']
+        else:
+            raise ValueError(
+                'Incompatible polarization mode in %s', self.scene_id
+            )
+
+    # get acquisition mode
         if self.mode_beam == 'IW':
             self.acq_mode = "Interferometric Wide Swath"
         elif self.mode_beam == 'SM':

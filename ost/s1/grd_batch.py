@@ -118,15 +118,19 @@ def _execute_grd_batch(
     out_dir = opj(processing_dir, track, acquisition_date)
     os.makedirs(out_dir, exist_ok=True)
 
+    # Get polarizations
+    polarisations = Sentinel1Scene(list_of_scenes[0]).polarisation_list
+
     file_id = '{}_{}'.format(acquisition_date, track)
     out_file = opj(out_dir, '{}_BS.dim'.format(file_id))
     out_ls_mask = opj(out_dir, '{}_LS.gpkg'.format(file_id))
+
     if single_band_tifs:
-        out_vv = out_file.replace('.dim', '_VV.tif')
-        out_vh = out_file.replace('.dim', '_VH.tif')
+        out_files = []
+        for pol in polarisations:
+            out_files.append(out_file.replace('.dim', '_{}.tif'.format(pol.lower())))
     else:
-        out_vv = out_file.replace('.dim', '.tif')
-        out_vh = None
+        out_files = [out_file.replace('.dim', '.tif')]
 
     # check if already processed
     if os.path.isfile(opj(out_dir, '.processed')):
@@ -147,32 +151,41 @@ def _execute_grd_batch(
                     else:
                         inventory_df.at[i, 'out_ls_mask'] = None
 
-                    if to_tif and not os.path.isfile(out_vv) and \
+                    if to_tif and not os.path.isfile(out_files[0]) and \
                             os.path.isfile(out_file):
-                        out_vv, out_vh = ard_to_rgb(
+                        out_pol1, out_pol2 = ard_to_rgb(
                             infile=out_file,
-                            outfiles=[out_vv, out_vh],
+                            outfiles=out_files,
                             driver='GTiff',
                             to_db=True,
                             executor_type=config_dict['executor_type'],
                             max_workers=os.cpu_count(),
                             single_band_tifs=single_band_tifs,
                         )
+                        out_files = [out_pol1, out_pol2]
                         if single_band_tifs:
-                            inventory_df.at[i, 'out_vv'] = out_vv
-                            inventory_df.at[i, 'out_vh'] = out_vh
+                            for pol, out_tif in zip(polarisations, out_files):
+                                inventory_df.at[
+                                    i, 'out_{}'.format(pol.lower())
+                                ] = out_tif
                         else:
-                            inventory_df.at[i, 'out_tif'] = out_vv
-                    elif to_tif and os.path.isfile(out_vv):
+                            inventory_df.at[i, 'out_tif'] = out_files[0]
+                    elif to_tif and os.path.isfile(out_files[0]):
                         if single_band_tifs:
-                            inventory_df.at[i, 'out_vv'] = out_vv
-                            inventory_df.at[i, 'out_vh'] = out_vh
+                            for pol, out_tif in zip(polarisations, out_files):
+                                inventory_df.at[
+                                    i, 'out_{}'.format(pol.lower())
+                                ] = out_tif
                         else:
-                            inventory_df.at[i, 'out_tif'] = out_vv
+                            inventory_df.at[
+                                i, 'out_tif'
+                            ] = out_files[0]
                     else:
                         if single_band_tifs:
-                            inventory_df.at[i, 'out_vv'] = None
-                            inventory_df.at[i, 'out_vh'] = None
+                            for pol, out_tif in zip(polarisations, out_files):
+                                inventory_df.at[
+                                    i, 'out_{}'.format(pol.lower())
+                                ] = None
                         else:
                             inventory_df.at[i, 'out_tif'] = None
     else:
@@ -197,22 +210,25 @@ def _execute_grd_batch(
                 if row.identifier == Sentinel1Scene(s).scene_id:
                     inventory_df.at[i, 'out_dimap'] = out_file
                     inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
-                    if to_tif and out_file is not None:
-                        if not os.path.exists(out_vv):
-                            out_vv, out_vh = ard_to_rgb(
-                                infile=out_file,
-                                outfiles=[out_vv, out_vh],
-                                driver='GTiff',
-                                to_db=True,
-                                executor_type=config_dict['executor_type'],
-                                max_workers=os.cpu_count(),
-                                single_band_tifs=single_band_tifs,
-                            )
+                    if to_tif and not os.path.isfile(out_files[0]) and \
+                            os.path.isfile(out_file):
+                        out_pol1, out_pol2 = ard_to_rgb(
+                            infile=out_file,
+                            outfiles=out_files,
+                            driver='GTiff',
+                            to_db=True,
+                            executor_type=config_dict['executor_type'],
+                            max_workers=os.cpu_count(),
+                            single_band_tifs=single_band_tifs,
+                        )
+                        out_files = [out_pol1, out_pol2]
                         if single_band_tifs:
-                            inventory_df.at[i, 'out_vv'] = out_vv
-                            inventory_df.at[i, 'out_vh'] = out_vh
+                            for pol, out_tif in zip(polarisations, out_files):
+                                inventory_df.at[
+                                    i, 'out_{}'.format(pol.lower())
+                                ] = out_tif
                         else:
-                            inventory_df.at[i, 'out_tif'] = out_vv
+                            inventory_df.at[i, 'out_tif'] = out_files[0]
     return inventory_df, list_of_scenes
 
 
@@ -225,7 +241,12 @@ def grd_to_ard_batch(
         subset=None,
         to_tif=False,
         single_band_tifs=False,
+        polarisations=None
 ):
+    if polarisations is None:
+        polarisations = config_dict['processing']['single_ARD']['polarisation']
+    else:
+        polarisations = ['HH', 'HV', 'VV', 'VH']
     # Where all combinations are stored for parallel processing
     lists_to_process = []
     # where all frames are grouped into acquisitions
@@ -259,8 +280,11 @@ def grd_to_ard_batch(
                         inventory_df.at[i, 'out_dimap'] = temp_inv.at[i, 'out_dimap']
                         inventory_df.at[i, 'out_ls_mask'] = temp_inv.at[i, 'out_ls_mask']
                         if single_band_tifs:
-                            inventory_df.at[i, 'out_vv'] = temp_inv.at[i, 'out_vv']
-                            inventory_df.at[i, 'out_vh'] = temp_inv.at[i, 'out_vh']
+                            if single_band_tifs:
+                                scene_pols = Sentinel1Scene(scene).polarisation_list
+                                for pol in scene_pols:
+                                    pol = pol.lower()
+                                    inventory_df.at[i, 'out_{}'.format(pol)] = temp_inv.at[i, 'out_{}'.format(pol)]
                         else:
                             inventory_df.at[i, 'out_tif'] = temp_inv.at[i, 'out_tif']
         except Exception as e:
@@ -365,7 +389,7 @@ def timeseries_to_timescan(
         timescan_dir = opj(track_dir, 'Timescan')
         os.makedirs(timescan_dir, exist_ok=True)
 
-        # loop thorugh each polarization
+        # loop thorugh each polarisation
         for polar in ['VV', 'VH', 'HH', 'HV']:
             if os.path.isfile(opj(timescan_dir, '.{}.processed'.format(polar))):
                 logger.info(

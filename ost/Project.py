@@ -199,12 +199,34 @@ class Sentinel1(Generic):
 
         # ------------------------------------------
         # 4 Check and set polarisations
-        possible_pols = ['*', 'VV', 'VH', 'HV', 'HH', 'VV VH', 'HH HV']
-        if polarisation in possible_pols:
-            self.polarisation = polarisation
+        self.polarisation_list = []
+        if polarisation == '*':
+            polarisation = ['HH', 'HV', 'VV', 'VH']
+        else:
+            polarisation = polarisation.split(' ')
+        possible_pols = ['VV', 'VH', 'HV', 'HH']
+        for input_pol in polarisation:
+            if input_pol in possible_pols:
+                self.polarisation_list.append(input_pol)
+        if self.polarisation_list == []:
+            raise ValueError(
+                "Polarisation must be one out of {possible_pols}"
+            )
+        if 'HV' in self.polarisation_list and 'VH' in self.polarisation_list:
+            self.polarisation = '*'
+        elif 'VH' in self.polarisation_list:
+            self.polarisation = 'VV VH'
+        elif 'HV' in self.polarisation_list:
+            self.polarisation = 'HH HV'
+        elif 'VV' in self.polarisation_list and \
+                len(self.polarisation_list) == 1:
+            self.polarisation = 'VV'
+        elif 'HH' in self.polarisation_list and \
+             len(self.polarisation_list) == 1:
+            self.polarisation = 'HH'
         else:
             raise ValueError(
-                f"Polarisation must be one out of {possible_pols}"
+                "Polarisation must be one out of {possible_pols}"
             )
 
         # ------------------------------------------
@@ -638,6 +660,7 @@ class Sentinel1Batch(Sentinel1):
             subset=self.aoi,
             to_tif=to_tif,
             single_band_tifs=single_band_tifs,
+            polarisations=self.polarisation_list
             )
 
         # time-series part
