@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 LABEL maintainer="Petr Sevcik, EOX"
-LABEL OpenSARToolkit='0.9.5'
+LABEL OpenSARToolkit='0.9.6'
 
 # set work directory to home and download snap
 WORKDIR /home/ost
@@ -13,12 +13,12 @@ COPY snap7.varfile $HOME
 ENV OTB_VERSION="7.1.0" \
     TBX_VERSION="7" \
     TBX_SUBVERSION="0"
-ENV \ 
-  TBX="esa-snap_sentinel_unix_${TBX_VERSION}_${TBX_SUBVERSION}.sh" \
-  SNAP_URL="http://step.esa.int/downloads/${TBX_VERSION}.${TBX_SUBVERSION}/installers" \
-  OTB=OTB-${OTB_VERSION}-Linux64.run \
-  HOME=/home/ost \
-  PATH=$PATH:/home/ost/programs/snap/bin:/home/ost/programs/OTB-${OTB_VERSION}-Linux64/bin
+
+ENV TBX="esa-snap_sentinel_unix_${TBX_VERSION}_${TBX_SUBVERSION}.sh" \
+    SNAP_URL="http://step.esa.int/downloads/${TBX_VERSION}.${TBX_SUBVERSION}/installers" \
+    OTB=OTB-${OTB_VERSION}-Linux64.run \
+    HOME=/home/ost \
+    PATH=$PATH:/home/ost/programs/snap/bin:/home/ost/programs/OTB-${OTB_VERSION}-Linux64/bin
 
 # install all dependencies
 RUN groupadd -r ost && \
