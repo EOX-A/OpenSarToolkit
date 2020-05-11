@@ -9,7 +9,7 @@ import logging
 
 # import non-standar libes
 import requests
-import tqdm
+import tqdm.auto as tqdm
 
 # import ost classes/functions
 from ost.helpers import helpers as h

@@ -3,7 +3,7 @@ import getpass
 import datetime
 import urllib
 import requests
-import tqdm
+import tqdm.auto as tqdm
 from pathlib import Path
 import logging
 from shapely.wkt import loads

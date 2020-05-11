@@ -4,7 +4,7 @@ import glob
 import getpass
 import urllib
 import requests
-import tqdm
+import tqdm.auto as tqdm
 import logging
 
 from ost.helpers import helpers as h

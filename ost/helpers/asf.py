@@ -1,7 +1,10 @@
 import os
 import logging
 import requests
-import tqdm
+from http.cookiejar import CookieJar
+import urllib.error
+import urllib.request as urlreq
+import tqdm.auto as tqdm
 from pathlib import Path
 from retry import retry
 
@@ -50,26 +53,42 @@ class SessionWithHeaderRedirection(requests.Session):
 
 def check_connection(uname, pword):
     '''A helper function to check if a connection can be established
-
     Args:
         uname: username of ASF Vertex server
         pword: password of ASF Vertex server
-
     Returns
         int: status code of the get request
     '''
-
-    # random url to check
-    url = (
-        'https://datapool.asf.alaska.edu/SLC/SB/''S1B_IW_SLC__1SDV_'
-        '20191119T053342_20191119T053410_018992_023D59_F309.zip'
+    password_manager = urlreq.HTTPPasswordMgrWithDefaultRealm()
+    password_manager.add_password(
+        None, "https://urs.earthdata.nasa.gov", uname, pword
     )
 
-    # connect and get response
-    session = SessionWithHeaderRedirection(uname, pword)
-    response = session.get(url, stream=True)
+    cookie_jar = CookieJar()
 
-    return response.status_code
+    opener = urlreq.build_opener(
+        urlreq.HTTPBasicAuthHandler(password_manager),
+        urlreq.HTTPCookieProcessor(cookie_jar)
+    )
+    urlreq.install_opener(opener)
+
+    url = ('https://datapool.asf.alaska.edu/SLC/SA/S1A_IW_SLC__1SSV_'
+           '20160801T234454_20160801T234520_012413_0135F9_B926.zip'
+           )
+
+    try:
+        urlreq.urlopen(url=url)
+    except urllib.error.HTTPError as e:
+        # Return code error (e.g. 404, 501, ...)
+        # ...
+        response_code = e.reason
+    except urllib.error.URLError as e:
+        # Not an HTTP-specific error (e.g. connection refused)
+        # ...
+        response_code = e.reason
+    else:
+        response_code = 200
+    return response_code
 
 
 @retry(tries=5)
@@ -90,14 +109,37 @@ def s1_download(argument_list):
     uname = argument_list[2]
     pword = argument_list[3]
 
-    session = SessionWithHeaderRedirection(uname, pword)
+    password_manager = urlreq.HTTPPasswordMgrWithDefaultRealm()
+    password_manager.add_password(
+        None, "https://urs.earthdata.nasa.gov", uname, pword
+    )
 
-    logger.info('Downloading scene to: {}'.format(filename))
+    cookie_jar = CookieJar()
+
+    opener = urlreq.build_opener(
+        urlreq.HTTPBasicAuthHandler(password_manager),
+        urlreq.HTTPCookieProcessor(cookie_jar)
+    )
+    urlreq.install_opener(opener)
+
+    logger.debug('INFO: Downloading scene to: {}'.format(filename))
     # submit the request using the session
-    response = session.get(url, stream=True)
-
-    # raise an exception in case of http errors
-    response.raise_for_status()
+    try:
+        response = urlreq.urlopen(url=url)
+        # raise an exception in case of http errors
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            logger.debug(
+                'Product %s missing from the archive, continuing.',
+                filename.split('/')[-1]
+            )
+            return filename.split('/')[-1]
+        else:
+            raise e
+    except urllib.error.URLError as e:
+        # Not an HTTP-specific error (e.g. connection refused)
+        # ...
+        raise e
 
     # get download size
     total_length = int(response.headers.get('content-length', 0))
@@ -110,10 +152,6 @@ def s1_download(argument_list):
         first_byte = os.path.getsize(filename)
     else:
         first_byte = 0
-
-    # get byte offset for already downloaded file
-    header = {"Range": f"bytes={first_byte}-{total_length}"}
-    response = session.get(url, headers=header, stream=True)
 
     # actual download
     with open(filename, "ab") as file:
