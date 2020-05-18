@@ -44,6 +44,30 @@ def test_esa_scihub_connection(s1_grd_notnr_ost_product):
 @pytest.mark.skipif("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true",
                     reason="Skipping this test on Travis CI."
                     )
+def test_asf_download(s1_grd_notnr_ost_product, mirror=2):
+    herbert_uname = HERBERT_USER['uname']
+    herbert_password = HERBERT_USER['asf_pword']
+    df = pd.DataFrame({'identifier': [s1_grd_notnr_ost_product[1].scene_id]})
+    with TemporaryDirectory(dir=os.getcwd()) as temp:
+        download_sentinel1(
+            inventory_df=df,
+            download_dir=temp,
+            mirror=mirror,
+            concurrent=1,
+            uname=herbert_uname,
+            pword=herbert_password
+        )
+        from ost.helpers.helpers import check_zipfile
+        product_path = s1_grd_notnr_ost_product[1].get_path(
+            download_dir=temp,
+        )
+        return_code = check_zipfile(product_path)
+        assert return_code is None
+
+
+@pytest.mark.skipif("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true",
+                    reason="Skipping this test on Travis CI."
+                    )
 def test_esa_scihub_download(s1_grd_notnr_ost_product, mirror=1):
     herbert_uname = HERBERT_USER['uname']
     herbert_password = HERBERT_USER['pword']
@@ -61,30 +85,6 @@ def test_esa_scihub_download(s1_grd_notnr_ost_product, mirror=1):
         product_path = s1_grd_notnr_ost_product[1].get_path(
             download_dir=temp,
             data_mount='/eodata'
-        )
-        return_code = check_zipfile(product_path)
-        assert return_code is None
-
-
-@pytest.mark.skipif("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true",
-                    reason="Skipping this test on Travis CI."
-                    )
-def test_asf_download(s1_grd_notnr_ost_product, mirror=2):
-    herbert_uname = HERBERT_USER['uname']
-    herbert_password = HERBERT_USER['asf_pword']
-    df = pd.DataFrame({'identifier': [s1_grd_notnr_ost_product[1].scene_id]})
-    with TemporaryDirectory(dir=os.getcwd()) as temp:
-        download_sentinel1(
-            inventory_df=df,
-            download_dir=temp,
-            mirror=mirror,
-            concurrent=1,
-            uname=herbert_uname,
-            pword=herbert_password
-        )
-        from ost.helpers.helpers import check_zipfile
-        product_path = s1_grd_notnr_ost_product[1].get_path(
-            download_dir=temp,
         )
         return_code = check_zipfile(product_path)
         assert return_code is None
