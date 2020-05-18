@@ -30,13 +30,17 @@ def s1_id():
     return 'S1A_IW_GRDH_1SDV_20141003T040550_20141003T040619_002660_002F64_EC04'
 
 
+@pytest.fixture
+def s1_mai_2019_id():
+    return 'S1B_IW_GRDH_1SDV_20200503T170006_20200503T170031_021420_028AA0_ABBD'
+
+
 @pytest.fixture(scope='session')
 def s1_grd_notnr():
     return os.path.join(
         CACHE_DIR,
         'S1B_IW_GRDH_1SDV_20180813T054020_20180813T054045_012240_0168D6_B775.zip'
     )
-
 
 @pytest.fixture(scope='session')
 def s1_grd_notnr_ost_product(s1_grd_notnr):
