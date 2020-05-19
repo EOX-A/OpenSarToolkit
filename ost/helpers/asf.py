@@ -157,7 +157,7 @@ def s1_download(argument_list):
     with requests.Session() as s, open(filename, "ab") as file:
         s.auth = (uname, pword)
         response_1 = s.request('get', url)
-        response = s.get(response_1.url, auth=(uname, pword))
+        response = s.get(response_1.url, auth=(uname, pword), stream=True)
 
         if total_length is None:
             file.write(response.content)
