@@ -17,40 +17,6 @@ from ost.s1.s1scene import Sentinel1Scene as S1Scene
 logger = logging.getLogger(__name__)
 
 
-# we need this class for earthdata access
-class SessionWithHeaderRedirection(requests.Session):
-    """ A class that helps connect to NASA's Earthdata
-
-    """
-
-    AUTH_HOST = 'urs.earthdata.nasa.gov'
-
-    def __init__(self, username, password):
-        super().__init__()
-        self.auth = (username, password)
-
-    # Overrides from the library to keep headers when redirected to or from
-    # the NASA auth host.
-
-    def rebuild_auth(self, prepared_request, response):
-
-        headers = prepared_request.headers
-        url = prepared_request.url
-
-        if 'Authorization' in headers:
-
-            original_parsed = requests.utils.urlparse(response.request.url)
-            redirect_parsed = requests.utils.urlparse(url)
-
-            if (original_parsed.hostname != redirect_parsed.hostname) and \
-                redirect_parsed.hostname != self.AUTH_HOST and \
-                    original_parsed.hostname != self.AUTH_HOST:
-
-                del headers['Authorization']
-
-        return
-
-
 def check_connection(uname, pword):
     '''A helper function to check if a connection can be established
     Args:
