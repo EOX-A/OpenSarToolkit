@@ -9,6 +9,7 @@ Changelog
 * set asf search as primary search
 * remove get_paths from creo and onda DIAS from Sentinel1Scene class
 * remove peps from s1scene
+* remove onda and peps download fuctions as they are not tested
 
 -----
 0.9.6

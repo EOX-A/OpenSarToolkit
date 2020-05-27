@@ -1,6 +1,5 @@
 import os
 from os.path import join as opj
-import sys
 import importlib
 import json
 import glob
@@ -18,7 +17,6 @@ from tempfile import TemporaryDirectory
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-import requests
 from shapely.wkt import loads
 from shapely.geometry import Polygon, Point
 

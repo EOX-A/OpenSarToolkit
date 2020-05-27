@@ -1,13 +1,3 @@
-#! /usr/bin/env python
-"""
-This script allows for the search of Sentinel-1 data on scihub.
-
-Based on some search parameters the script will create a query on
-www.scihub.copernicus.eu and return the results either as shapefile,
-sqlite, or PostGreSQL database.
-"""
-
-# import modules
 import getpass
 import os
 import logging

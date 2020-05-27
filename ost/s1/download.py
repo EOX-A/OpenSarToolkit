@@ -5,7 +5,7 @@ import getpass
 import logging
 
 from ost.s1.s1scene import Sentinel1Scene as S1Scene
-from ost.helpers import scihub, peps, asf, onda
+from ost.helpers import scihub, asf
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +64,6 @@ def download_sentinel1(inventory_df,
         print('Select the server from where you want to download:')
         print('(1) Copernicus Apihub (ESA, rolling archive)')
         print('(2) Alaska Satellite Facility (NASA, full archive)')
-        # print('(3) PEPS (CNES, 1 year rolling archive)')
-        # print('(4) ONDA DIAS (ONDA DIAS full archive for SLC - or GRD from 30 June 2019)')
         mirror = input(' Type 1, 2')
 
     if not uname:
@@ -76,6 +74,7 @@ def download_sentinel1(inventory_df,
         print(' Please provide password for the selected server')
         pword = getpass.getpass(' Password:')
 
+    error_code = 200
     # check if uname and pwrod are correct
     if int(mirror) == 1:
         error_code = scihub.check_connection(uname, pword)
@@ -89,14 +88,7 @@ def download_sentinel1(inventory_df,
             logger.info('Maximum allowed parallel downloads \
                   from Earthdata are 10. Setting concurrent accordingly.')
             concurrent = 10
-    elif int(mirror) == 3:
-        raise DeprecationWarning('CNES PEPS download currently unsupported!')
-        error_code = peps.check_connection(uname, pword)
-    elif int(mirror) == 4:
-        raise DeprecationWarning('ONDA DIAS download currently unsupported!')
-        error_code = onda.check_connection(uname, pword)
 
-        
     if error_code == 401:
         raise ValueError('Username/Password are incorrect')
     elif error_code != 200:
@@ -119,11 +111,3 @@ def download_sentinel1(inventory_df,
                            max_workers=concurrent,
                            executor_type=executor_type
                            )
-    elif int(mirror) == 3:   # PEPS
-        raise DeprecationWarning('CNES PEPS download currently unsupported!')
-        peps.batch_download(inventory_df, download_dir,
-                            uname, pword, concurrent)
-    elif int(mirror) == 4:   # ONDA DIAS
-        raise DeprecationWarning('ONDA DIAS download currently unsupported!')
-        onda.batch_download(inventory_df, download_dir,
-                            uname, pword, concurrent)

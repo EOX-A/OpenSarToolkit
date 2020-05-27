@@ -16,7 +16,7 @@ def test_asf_catalogue():
             beammode='IW',
             begindate='2020-01-01',
             enddate='2020-01-04',
-            output=os.path.join(temp, 'test_cat.shp'),
+            output=os.path.join(temp, 'test_cat.gpkg'),
             password=HERBERT_USER['pword'],
             polarisation='VV,VH',
             producttype='GRD',
