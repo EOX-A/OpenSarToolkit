@@ -35,7 +35,9 @@ def ask_credentials():
 
 
 def connect(base_url='https://scihub.copernicus.eu/apihub/',
-            uname=None, pword=None):
+            uname=None,
+            pword=None
+            ):
     '''A helper function to connect and authenticate to the Copernicus' scihub.
 
     Args:

@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import timedelta
 
 import logging
 import rasterio
@@ -9,6 +10,7 @@ from datetime import datetime
 from shapely.wkt import loads
 from pathlib import Path
 
+from ost.helpers import asf_search
 from ost.helpers import vector as vec, raster as ras
 from ost.helpers import scihub, helpers as h
 from ost.helpers.settings import set_log_level, setup_logfile, OST_ROOT
@@ -110,6 +112,7 @@ class Generic:
         # 5 Handle Period of Interest
         try:
             datetime.strptime(start, '%Y-%m-%d')
+            self.start_datetime = datetime.strptime(start, '%Y-%m-%d')
             self.start = start
         except ValueError:
             raise ValueError("Incorrect date format for start date. "
@@ -117,6 +120,7 @@ class Generic:
 
         try:
             datetime.strptime(end, '%Y-%m-%d')
+            self.end_datetime = datetime.strptime(end, '%Y-%m-%d')
             self.end = end
         except ValueError:
             raise ValueError("Incorrect date format for end date. "
@@ -273,8 +277,13 @@ class Sentinel1(Generic):
 
     # ------------------------------------------
     # methods
-    def search(self, outfile='full.inventory.gpkg', append=False,
-               uname=None, pword=None):
+    def search(self,
+               outfile='full.inventory.gpkg',
+               mirror=2,
+               append=False,
+               uname=None,
+               pword=None
+               ):
         """
         :param outfile:
         :param append:
@@ -282,22 +291,39 @@ class Sentinel1(Generic):
         :param pword:
         :return:
         """
-
-        # create scihub conform aoi string
-        aoi_str = scihub.create_aoi_str(self.aoi)
-
-        # create scihub conform TOI
-        toi_str = scihub.create_toi_str(self.start, self.end)
-
-        # create scihub conform product specification
-        product_specs_str = scihub.create_s1_product_specs(
-            self.product_type, self.polarisation, self.beam_mode
-        )
-
         # join the query
-        query = scihub.create_query(
-            'Sentinel-1', aoi_str, toi_str, product_specs_str
-        )
+        if mirror == 2:
+            # create asf conform product specification
+            aoi_str = asf_search.create_aoi_str(self.aoi)
+            toi_str = asf_search.create_toi_str(
+                self.start,
+                self.end
+                # (self.end_datetime+timedelta(days=1)).strftime('%Y-%m-%d')
+            )
+            product_specs_str = asf_search.create_s1_product_specs(
+                self.product_type, self.polarisation, self.beam_mode
+            )
+
+            query = asf_search.create_query(
+                aoi_str,
+                toi_str,
+                product_specs_str
+            )
+        else:
+            # create scihub conform aoi string
+            aoi_str = scihub.create_aoi_str(self.aoi)
+
+            # create scihub conform TOI
+            toi_str = scihub.create_toi_str(self.start, self.end)
+
+            # create scihub conform product specification
+            product_specs_str = scihub.create_s1_product_specs(
+                self.product_type, self.polarisation, self.beam_mode
+            )
+
+            query = scihub.create_query(
+                'Sentinel-1', aoi_str, toi_str, product_specs_str
+            )
 
         if not uname or not pword:
             # ask for username and password
@@ -311,11 +337,18 @@ class Sentinel1(Generic):
             )
         else:
             Path(outfile)
-
-        search.scihub_catalogue(
-            query, self.inventory_file, append, uname, pword
-        )
-        del uname, pword
+        if mirror == 2:
+            search.catalogue(
+                query,
+                self.inventory_file,
+                append,
+                base_url='https://api-prod-private.asf.alaska.edu/services/search/param?'
+            )
+        else:
+            search.scihub_catalogue(
+                query, self.inventory_file, append, uname, pword
+            )
+            del uname, pword
 
         if self.inventory_file.exists():
             # read inventory into the inventory attribute
@@ -383,8 +416,13 @@ class Sentinel1(Generic):
         for key in self.refined_inventory_dict:
             logger.info(f' {self.coverages[key]} mosaics for mosaic key {key}')
 
-    def download(self, inventory_df, mirror=None, concurrent=2,
-                 uname=None, pword=None):
+    def download(self,
+                 inventory_df,
+                 mirror=None,
+                 concurrent=2,
+                 uname=None,
+                 pword=None
+                 ):
 
         # if an old inventory exists drop download_path
         if 'download_path' in inventory_df:

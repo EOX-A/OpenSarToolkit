@@ -22,7 +22,7 @@ import requests
 from shapely.wkt import loads
 from shapely.geometry import Polygon, Point
 
-from ost.helpers import scihub, peps, onda, raster as ras
+from ost.helpers import scihub, raster as ras
 from ost.s1.grd_to_ard import grd_to_ard
 from ost.s1.burst_batch import bursts_to_ards
 from ost.helpers.settings import APIHUB_BASEURL, check_ard_parameters
@@ -91,7 +91,7 @@ class Sentinel1Scene:
                 'Incompatible polarization mode in %s', self.scene_id
             )
 
-    # get acquisition mode
+        # get acquisition mode
         if self.mode_beam == 'IW':
             self.acq_mode = "Interferometric Wide Swath"
         elif self.mode_beam == 'SM':
@@ -164,36 +164,15 @@ class Sentinel1Scene:
             print(' Select the server from where you want to download:')
             print(' (1) Copernicus Apihub (ESA, rolling archive)')
             print(' (2) Alaska Satellite Facility (NASA, full archive)')
-            print(' (3) PEPS (CNES, 1 year rolling archive)')
-            print(' (4) ONDA DIAS (ONDA DIAS full archive for'
-                  ' SLC - or GRD from 30 June 2019)')
-            print(' (5) Alaska Satellite Facility (using WGET'
-                  ' - unstable - use only if 2 fails)')
-            mirror = input(' Type 1, 2, 3, 4 or 5: ')
+            mirror = input(' Type 1 or 2')
 
         from ost.s1 import download
-
         if mirror == '1':
             uname, pword = scihub.ask_credentials()
             opener = scihub.connect(uname=uname, pword=pword)
             df = pd.DataFrame(
                 {'identifier': [self.scene_id],
                  'uuid': [self.scihub_uuid(opener)]
-                 }
-            )
-        elif mirror == '3':
-            uname, pword = peps.ask_credentials()
-            df = pd.DataFrame(
-                {'identifier': [self.scene_id],
-                 'uuid': [self.peps_uuid(uname=uname, pword=pword)]
-                 }
-            )
-        elif mirror == '4':
-            uname, pword = onda.ask_credentials()
-            opener = onda.connect(uname=uname, pword=pword)
-            df = pd.DataFrame(
-                {'identifier': [self.scene_id],
-                 'uuid': [self.ondadias_uuid(opener)]
                  }
             )
         else:  # ASF
@@ -209,27 +188,6 @@ class Sentinel1Scene:
                                     )
         # delete credentials
         del uname, pword
-
-    def _creodias_path(self, data_mount='/eodata'):
-
-        path = Path(data_mount).joinpath(
-            f'Sentinel-1/SAR/{self.product_type}/{self.year}/'
-            f'{self.month}/{self.day}/{self.scene_id}.SAFE'
-        )
-
-        return path
-
-        # print(' Dummy function for mundi paths to be added')
-        return Path('/foo/foo/foo')
-
-    def _onda_path(self, data_mount):
-
-        path = Path(data_mount).joinpath(
-            f'S1/LEVEL-1/{self.onda_class}/{self.year}/{self.month}/'
-            f'{self.day}/{self.scene_id}.zip/{self.scene_id}.SAFE'
-        )
-
-        return path
 
     # location of file (including diases)
     def _download_path(self, download_dir, mkdir=False):
@@ -252,14 +210,6 @@ class Sentinel1Scene:
             if product_dl_path.with_suffix('.downloaded').exists():
                 path = product_dl_path
 
-        if data_mount is not None and path is None:
-            if isinstance(data_mount, str):
-                data_mount = Path(data_mount)
-            if self._creodias_path(data_mount).joinpath(
-                    'manifest.safe').exists():
-                path = self._creodias_path(data_mount)
-            elif self._onda_path(data_mount).exists():
-                path = self._onda_path(data_mount)
         if path is None:
             raise FileNotFoundError(
                 'No product path found for: {}'.format(self.scene_id)
@@ -285,13 +235,17 @@ class Sentinel1Scene:
             req = opener.open(url)
         except URLError as error:
             if hasattr(error, 'reason'):
-                print(' We failed to connect to the server.')
-                print(' Reason: ', error.reason)
-                sys.exit()
+                raise ConnectionError(
+                    'We failed to connect to the server. Reason: {}'.format(
+                    error.reason
+                    )
+                )
             elif hasattr(error, 'code'):
-                print(' The server couldn\'t fulfill the request.')
-                print(' Error code: ', error.code)
-                sys.exit()
+                raise ConnectionError(
+                    'The server couldnt fulfill the request. '
+                    'Error code: {}'.format(error.code)
+                )
+
         else:
             # write the request to to the response variable
             # (i.e. the xml coming back from scihub)
@@ -324,13 +278,16 @@ class Sentinel1Scene:
             req = opener.open(url)
         except URLError as error:
             if hasattr(error, 'reason'):
-                print(' We failed to connect to the server.')
-                print(f' Reason: {error.reason}')
-                sys.exit()
+                raise ConnectionError(
+                    'We failed to connect to the server. Reason: {}'.format(
+                        error.reason
+                    )
+                )
             elif hasattr(error, 'code'):
-                print(' The server couldn\'t fulfill the request.')
-                print(f' Error code: {error.code}')
-                sys.exit()
+                raise ConnectionError(
+                    'The server couldnt fulfill the request. '
+                    'Error code: {}'.format(error.code)
+                )
         else:
             # write the request to to the response variable
             # (i.e. the xml coming back from scihub)
@@ -355,13 +312,16 @@ class Sentinel1Scene:
 
         except URLError as error:
             if hasattr(error, 'reason'):
-                print(' We failed to connect to the server.')
-                print(' Reason: ', error.reason)
-                sys.exit()
+                raise ConnectionError(
+                    'We failed to connect to the server. Reason: {}'.format(
+                        error.reason
+                    )
+                )
             elif hasattr(error, 'code'):
-                print(' The server couldn\'t fulfill the request.')
-                print(' Error code: ', error.code)
-                sys.exit()
+                raise ConnectionError(
+                    'The server couldnt fulfill the request. '
+                    'Error code: {}'.format(error.code)
+                )
 
         # write the request to to the response variable
         # (i.e. the xml coming back from scihub)
@@ -383,19 +343,21 @@ class Sentinel1Scene:
         anno_path = ('(\'{}\')/Nodes(\'{}.SAFE\')/Nodes(\'annotation\')/'
                      'Nodes'.format(uuid, self.scene_id))
         url = scihub_url + anno_path
-        # print(url)
         try:
             # get the request
             req = opener.open(url)
         except URLError as error:
             if hasattr(error, 'reason'):
-                print(' We failed to connect to the server.')
-                print(' Reason: ', error.reason)
-                sys.exit()
+                raise ConnectionError(
+                    'We failed to connect to the server. Reason: {}'.format(
+                        error.reason
+                    )
+                )
             elif hasattr(error, 'code'):
-                print(' The server couldn\'t fulfill the request.')
-                print(' Error code: ', error.code)
-                sys.exit()
+                raise ConnectionError(
+                    'The server couldnt fulfill the request. '
+                    'Error code: {}'.format(error.code)
+                )
         else:
             # write the request to to the response variable
             # (i.e. the xml coming back from scihub)
@@ -462,8 +424,6 @@ class Sentinel1Scene:
                 azi_anx_time = np.mod(azi_anx_time, orbit_time)
 
             azi_anx_time = np.int32(np.round(azi_anx_time * 10))
-            #           burstid = 'T{}_{}_{}'.format(track, swath, burstid)
-            #           first and lastline sometimes shifts by 1 for some reason?
             try:
                 firstthis = first[firstline]
             except:
@@ -471,7 +431,7 @@ class Sentinel1Scene:
                 try:
                     firstthis = first[firstline]
                 except:
-                    print('First line not found in annotation file')
+                    logger.info('First line not found in annotation file')
                     firstthis = []
             try:
                 lastthis = last[lastline]
@@ -480,7 +440,7 @@ class Sentinel1Scene:
                 try:
                     lastthis = last[lastline]
                 except:
-                    print('Last line not found in annotation file')
+                    logger.info('Last line not found in annotation file')
                     lastthis = []
             corners = np.zeros([4, 2], dtype=np.float32)
 
@@ -531,13 +491,16 @@ class Sentinel1Scene:
                 req = opener.open(url)
             except URLError as error:
                 if hasattr(error, 'reason'):
-                    print(' We failed to connect to the server.')
-                    print(' Reason: ', error.reason)
-                    sys.exit()
+                    raise ConnectionError(
+                        'We failed to connect to the server. Reason: {}'.format(
+                            error.reason
+                        )
+                    )
                 elif hasattr(error, 'code'):
-                    print(' The server couldn\'t fulfill the request.')
-                    print(' Error code: ', error.code)
-                    sys.exit()
+                    raise ConnectionError(
+                        'The server couldnt fulfill the request. '
+                        'Error code: {}'.format(error.code)
+                    )
             else:
                 # write the request to to the response variable
                 # (i.e. the xml coming back from scihub)
@@ -594,49 +557,6 @@ class Sentinel1Scene:
 
         return gdf_final.drop_duplicates(['AnxTime'], keep='first')
 
-    # onda dias uuid extractor
-    def ondadias_uuid(self, opener):
-
-        # construct the basic the url
-        base_url = ('https://catalogue.onda-dias.eu/dias-catalogue/'
-                    'Products?$search=')
-        action = '"' + self.scene_id + '.zip"'
-        # construct the download url
-        url = base_url + action
-
-        try:
-            # get the request
-            req = opener.open(url)
-        except URLError as error:
-            if hasattr(error, 'reason'):
-                print(' We failed to connect to the server.')
-                print(' Reason: ', error.reason)
-                sys.exit()
-            elif hasattr(error, 'code'):
-                print(' The server couldn\'t fulfill the request.')
-                print(' Error code: ', error.code)
-                sys.exit()
-        else:
-            # write the request to to the response variable
-            # (i.e. the xml coming back from onda dias)
-            response = req.read().decode('utf-8')
-
-            # parse the uuid from the response (a messy pseudo xml)
-            uuid = response.split('":"')[3].split('","')[0]
-            # except IndexError as error:
-            #    print('Image not available on ONDA DIAS now, please select another repository')
-            #    sys.exit()
-            # parse the xml page from the response - does not work at present
-            """dom = xml.dom.minidom.parseString(response)
-
-            # loop thorugh each entry (with all metadata)
-            for node in dom.getElementsByTagName('a:entry'):
-                download_url = node.getElementsByTagName(
-                    'a:id')[0].firstChild.nodeValue
-                uuid = download_url.split('(\'')[1].split('\')')[0]"""
-
-        return uuid
-
     # other data providers
     def asf_url(self):
 
@@ -655,58 +575,6 @@ class Sentinel1Scene:
         productURL = '{}/{}/{}/{}.zip'.format(asf_url, pType,
                                               mission, self.scene_id)
         return productURL
-
-    def peps_uuid(self, uname, pword):
-
-        url = ('https://peps.cnes.fr/resto/api/collections/S1/search.json?q={}'
-               .format(self.scene_id))
-        response = requests.get(url, stream=True, auth=(uname, pword))
-
-        # check response
-        if response.status_code == 401:
-            raise ValueError(' ERROR: Username/Password are incorrect.')
-        elif response.status_code != 200:
-            response.raise_for_status()
-
-        data = json.loads(response.text)
-        peps_uuid = data['features'][0]['id']
-        download_url = (data['features'][0]['properties']
-        ['services']['download']['url'])
-
-        return peps_uuid, download_url
-
-    def peps_online_status(self, uname, pword):
-
-        """
-        This function will download S1 products from CNES Peps mirror.
-
-        :param url: the url to the file you want to download
-        :param fileName: the absolute path to where the downloaded file should
-                         be written to
-        :param uname: ESA's scihub username
-        :param pword: ESA's scihub password
-        :return:
-        """
-
-        _, url = self.peps_uuid(uname, pword)
-
-        # define url
-        response = requests.get(url, stream=True, auth=(uname, pword))
-        status = response.status_code
-
-        # check response
-        if status == 401:
-            raise ValueError(' ERROR: Username/Password are incorrect.')
-        elif status == 404:
-            raise ValueError(' ERROR: File not found.')
-        elif status == 200:
-            status = 'online'
-        elif status == 202:
-            status = 'onTape'
-        else:
-            response.raise_for_status()
-
-        return status, url
 
     # processing related functions
     def get_ard_parameters(self, ard_type='OST-GTC'):
