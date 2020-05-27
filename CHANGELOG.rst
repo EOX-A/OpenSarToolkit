@@ -2,6 +2,19 @@
 Changelog
 #########
 
+-----
+0.9.7
+-----
+* added asf search
+* set asf search as primary search
+* remove get_paths from creo and onda DIAS from Sentinel1Scene class
+* remove peps from s1scene
+
+-----
+0.9.6
+-----
+* added single geotiff output for GRD processing
+* GRD batch returns updated inventory with processed products
 
 -----
 0.9.5
