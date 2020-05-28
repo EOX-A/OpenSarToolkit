@@ -532,4 +532,4 @@ def burst_to_ard(burst, config_dict):
                 out_dir.joinpath(f'{master_prefix}_coh').with_suffix('.dim')
             )
 
-    return burst.bid, burst.Date, out_bs, out_ls, out_pol, out_coh, None
+    return burst.bid, burst.Date, out_bs, out_ls, out_pol, out_coh, error

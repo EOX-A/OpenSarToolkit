@@ -9,7 +9,7 @@ from ost.helpers import helpers as h
 logger = logging.getLogger(__name__)
 
 
-@retry(tries=3, delay=1)
+@retry(tries=3, delay=1, logger=logger)
 def burst_import(
         infile,
         outfile,
@@ -86,7 +86,7 @@ def burst_import(
         )
 
 
-@retry(tries=3, delay=1)
+@retry(tries=3, delay=1, logger=logger)
 def ha_alpha(infile, outfile, logfile, config_dict):
     """A wrapper of SNAP H-A-alpha polarimetric decomposition
     This function takes an OST imported Sentinel-1 scene/burst
@@ -159,7 +159,7 @@ def ha_alpha(infile, outfile, logfile, config_dict):
         )
 
 
-@retry(tries=3, delay=1)
+@retry(tries=3, delay=1, logger=logger)
 def calibration(
         infile,
         outfile,
@@ -274,7 +274,7 @@ def calibration(
         )
 
 
-@retry(tries=3, delay=1)
+@retry(tries=3, delay=1, logger=logger)
 def coreg(master, slave, outfile, logfile, config_dict):
     """A wrapper around SNAP's back-geocoding co-registration routine
     This function takes 2 OST imported Sentinel-1 SLC products
@@ -328,7 +328,7 @@ def coreg(master, slave, outfile, logfile, config_dict):
         )
 
 
-@retry(tries=3, delay=1)
+@retry(tries=3, delay=1, logger=logger)
 def coreg2(master, slave, outfile, logfile, config_dict):
     """A wrapper around SNAP's back-geocoding co-registration routine
     This function takes 2 OST imported Sentinel-1 SLC products
@@ -382,7 +382,7 @@ def coreg2(master, slave, outfile, logfile, config_dict):
         )
 
 
-@retry(tries=3, delay=1)
+@retry(tries=3, delay=1, logger=logger)
 def coherence(infile, outfile, logfile, config_dict):
     """A wrapper around SNAP's coherence routine
     This function takes a co-registered stack of 2 Sentinel-1 SLC products

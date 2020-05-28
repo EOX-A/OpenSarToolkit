@@ -60,11 +60,6 @@ def test_bursts_to_ards(slc_project_class):
             slc_project_class.update_ard_parameters()
             slc_project_class.ard_parameters['single_ARD']['resolution'] = 20
             slc_project_class.update_ard_parameters()
-            # Test ard, Timeseries and Timescan with just one product
-            # slc_project_class.burst_inventory = slc_project_class.burst_inventory[
-            #    slc_project_class.burst_inventory.bid == 'A15_IW1_7542'
-            # ]
-            # print(slc_project_class.burst_inventory)
             slc_project_class.bursts_to_ards(
                 timeseries=True,
                 timescan=True,

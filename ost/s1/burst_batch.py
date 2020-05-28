@@ -43,10 +43,11 @@ def bursts_to_ards(
     # now we run with godale, which works also with 1 worker
     if max_workers == 1 or len(burst_gdf) == 1:
         for burst in proc_inventory.iterrows():
-            out_bs, out_ls, out_coh, out_pol = burst_to_ard(
-                burst=burst,
-                config_dict=config_dict
-            )
+            burst_id, burst_date, out_bs, \
+                out_ls, out_pol, out_coh, error = burst_to_ard(
+                    burst=burst,
+                    config_dict=config_dict
+                )
             out_files['bs'].append(out_bs)
             out_files['ls'].append(out_ls)
             out_files['coh'].append(out_coh)
@@ -58,7 +59,8 @@ def bursts_to_ards(
                 iterable=proc_inventory.iterrows(),
                 fargs=[config_dict]
         ):
-            out_bs, out_ls, out_coh, out_pol = task.result()
+            burst_id, burst_date, out_bs, \
+                out_ls, out_pol, out_coh, error = task.result()
             out_files['bs'].append(out_bs)
             out_files['ls'].append(out_ls)
             out_files['coh'].append(out_coh)
