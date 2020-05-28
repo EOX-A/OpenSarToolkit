@@ -10,6 +10,9 @@ Changelog
 * remove get_paths from creo and onda DIAS from Sentinel1Scene class
 * remove peps from s1scene
 * remove onda and peps download fuctions as they are not tested
+* updated SLC routine to current PhiLab version
+* adjusted burst processing to EOX-A release
+* adjusted ard_json for slc to match PhiLab
 
 -----
 0.9.6

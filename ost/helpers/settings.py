@@ -201,6 +201,7 @@ CONFIG_CHECK = dict({
         ['VV, VH, HH, HV', 'VV', 'VH', 'VV, VH', 'HH, HV', 'VV, HH']
                      },
     'to_db': {'type': bool},
+    'to_tif': {'type': bool},
     'geocoding': {'type': str, 'choices': ['terrain', 'ellipsoid']},
     'remove_speckle': {'type': bool},
     'filter': {'type': str, 'choices':
