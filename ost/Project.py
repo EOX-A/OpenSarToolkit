@@ -423,6 +423,11 @@ class Sentinel1(Generic):
                  uname=None,
                  pword=None
                  ):
+        if uname is None:
+            uname = self.uname
+        if pword is None:
+            pword = self.asf_pword
+            mirror = 2
 
         # if an old inventory exists drop download_path
         if 'download_path' in inventory_df:
@@ -445,8 +450,8 @@ class Sentinel1(Generic):
                 self.download_dir,
                 mirror=mirror,
                 concurrent=concurrent,
-                uname=self.uname,
-                pword=self.asf_pword
+                uname=uname,
+                pword=mirror
             )
 
     def create_burst_inventory(self,
@@ -767,6 +772,7 @@ class Sentinel1Batch(Sentinel1):
         # 3 Check ard parameters in case they have been updated,
         #   and write them to json file
         self.update_ard_parameters()
+        self.config_dict['subset'] = self.aoi
 
         # --------------------------------------------
         # 4 set resolution to degree
