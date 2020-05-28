@@ -218,7 +218,7 @@ def create_backscatter_layers(
             # run ls mask generation on calibration
             try:
                 common.ls_mask(
-                    out_cal.with_suffix('.dim'), out_ls, ls_log, config_dict
+                    out_cal.with_suffix('.dim'), out_ls, ls_log, ard
                 )
             except (GPTRuntimeError, InvalidFileError) as error:
                 logger.info(error)

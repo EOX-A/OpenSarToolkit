@@ -1,6 +1,7 @@
 import os
 import pytest
 import logging
+from pathlib import Path
 
 from ost.s1.slc_wrappers import burst_import, calibration, \
     coreg2, coherence, ha_alpha
@@ -12,58 +13,49 @@ def test_burst_import(s1_slc_master,
                       s1_slc_ost_master,
                       slc_project_class
                       ):
+    slc_project_class.update_ard_parameters()
     scene_id, master = s1_slc_ost_master
     for idx, burst in slc_project_class.burst_inventory.iterrows():
         if idx > 2 or burst.SwathID != 'IW1':
             continue
-        return_code = burst_import(
-            infile=s1_slc_master,
-            outfile=os.path.join(
+        out_path = burst_import(
+            infile=Path(s1_slc_master),
+            outfile=Path(os.path.join(
                 slc_project_class.temp_dir,
                 scene_id+'_'+burst.bid+'_import'
-            ),
+            )),
             logfile=logger,
             swath=burst.SwathID,
             burst=burst.BurstNr,
-            polar='VV,VH,HH,HV',
-            gpt_max_workers=os.cpu_count()
+            config_dict=slc_project_class.config_dict
         )
-        assert return_code == 0
+        assert os.path.isfile(out_path)
 
 
 def test_burst_calibration(s1_slc_ost_master,
                            slc_project_class,
                            ):
-    ard_params = {
-        'dem': {
-                "dem_name": "SRTM 1Sec HGT",
-                "dem_file": "",
-                "dem_nodata": 0,
-                "dem_resampling": "BILINEAR_INTERPOLATION",
-                "image_resampling": "BICUBIC_INTERPOLATION",
-                "egm_correction": False,
-                "out_projection": "WGS84(DD)"
-            },
-        'product_type': 'RTC-gamma0'
-    }
+    slc_project_class.ard_parameters.update(
+        product_type='RTC-gamma0',
+        resolution=60
+    )
+    slc_project_class.update_ard_parameters()
     scene_id, master = s1_slc_ost_master
     for idx, burst in slc_project_class.burst_inventory.iterrows():
         if idx > 2 or burst.SwathID != 'IW1':
             continue
-        return_code = calibration(
-            infile=os.path.join(
+        out_path = calibration(
+            infile=Path(os.path.join(
                 slc_project_class.temp_dir,
                 scene_id+'_'+burst.bid+'_import.dim'
-            ),
-            outfile=os.path.join(
+            )),
+            outfile=Path(os.path.join(
                 slc_project_class.temp_dir, scene_id+'_BS'
-            ),
+            )),
             logfile=logger,
-            ard=ard_params,
-            region=slc_project_class.aoi,
-            gpt_max_workers=os.cpu_count())
-
-        assert return_code == 0
+            config_dict=slc_project_class.config_dict
+        )
+        assert os.path.isfile(out_path)
 
 
 @pytest.mark.skip(reason="Takes too long skip for now!")

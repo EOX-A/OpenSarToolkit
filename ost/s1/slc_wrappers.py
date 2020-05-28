@@ -1,3 +1,4 @@
+import numpy as np
 import logging
 
 from retry import retry
@@ -36,9 +37,6 @@ def burst_import(
     ard = config_dict['processing']['single_ARD']
     bs_polar = ard['polarisation'].replace(' ', '')
     coh_polar = ard['coherence_bands'].replace(' ', '')
-    subset = config_dict['subset']
-
-    region = config_dict['aoi'] if subset else ''
 
     if ard['coherence']:
         polars = bs_polar if len(bs_polar) >= len(coh_polar) else coh_polar
@@ -61,7 +59,6 @@ def burst_import(
         f'-Ppolar={polars} '
         f'-Pswath={swath} '
         f'-Pburst={burst} '
-        f'-Pregion=\'{region}\' '
         f'-Poutput={str(outfile)}'
     )
 
@@ -189,8 +186,8 @@ def calibration(
     dem_dict = ard['dem']
     region = ''
     # calculate Multi-Look factors
-    azimuth_looks = 1  # int(np.floor(ard['resolution'] / 10 ))
-    range_looks = 5  # int(azimuth_looks * 5)
+    azimuth_looks = min(1, int(np.floor(ard['resolution'] / 10)))
+    range_looks = min(5, int(azimuth_looks * 5))
 
     # construct command dependent on selected product type
     if ard['product_type'] == 'RTC-gamma0':
