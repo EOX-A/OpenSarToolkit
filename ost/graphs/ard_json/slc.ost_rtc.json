@@ -46,6 +46,8 @@
             },            
             "coherence": true,
             "coherence_bands": "VV, VH, HH, HV",
+            "coherence_azimuth": 4,
+            "coherence_range": 20,
             "H-A-Alpha": true
         },
         "time-series_ARD": {
