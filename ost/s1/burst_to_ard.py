@@ -77,7 +77,7 @@ def create_polarimetric_layers(
 
         # move to final destination
         h.move_dimap(
-            out_htc, out_dir.joinpath(f'{burst_prefix}_pol'), ard['to_tif']
+            out_htc, out_dir.joinpath(f'{burst_prefix}_pol')
         )
 
         # write out check file for tracking that it is processed
@@ -201,7 +201,7 @@ def create_backscatter_layers(
 
         # move final backscatter product to actual output directory
         h.move_dimap(
-            out_tc, out_dir.joinpath(f'{burst_prefix}_bs'), ard['to_tif']
+            out_tc, out_dir.joinpath(f'{burst_prefix}_bs')
         )
 
         # ---------------------------------------------------------------------
@@ -226,7 +226,7 @@ def create_backscatter_layers(
 
             # move ls data to final destination
             h.move_dimap(
-                out_ls, out_dir.joinpath(f'{burst_prefix}_LS'), ard['to_tif']
+                out_ls, out_dir.joinpath(f'{burst_prefix}_LS')
             )
 
             out_ls_final = (
@@ -350,7 +350,7 @@ def create_coherence_layers(
 
         # move to final destination
         h.move_dimap(
-            out_tc, out_dir.joinpath(f'{master_prefix}_coh'), ard['to_tif']
+            out_tc, out_dir.joinpath(f'{master_prefix}_coh')
         )
 
         # write out check file for tracking that it is processed
