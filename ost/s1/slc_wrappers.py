@@ -76,8 +76,8 @@ def burst_import(
             f'See {logfile} for Snap\'s error message.'
         )
 
-    # do check routine
-    return_code = h.check_out_dimap(outfile)
+    # do not do the check routine
+    # return_code = h.check_out_dimap(outfile)
     if return_code == 0:
         return str(outfile.with_suffix('.dim'))
     else:
@@ -150,7 +150,7 @@ def ha_alpha(infile, outfile, logfile, config_dict):
         )
 
     # do check routine
-    return_code = h.check_out_dimap(outfile)
+    # return_code = h.check_out_dimap(outfile)
     if return_code == 0:
         return str(outfile.with_suffix('.dim'))
     else:
@@ -265,7 +265,7 @@ def calibration(
         )
 
     # do check routine
-    return_code = h.check_out_dimap(outfile)
+    # return_code = h.check_out_dimap(outfile)
     if return_code == 0:
         return str(outfile.with_suffix('.dim'))
     else:
@@ -319,7 +319,7 @@ def coreg(master, slave, outfile, logfile, config_dict):
         )
 
     # do check routine
-    return_code = h.check_out_dimap(outfile)
+    # return_code = h.check_out_dimap(outfile)
     if return_code == 0:
         return str(outfile.with_suffix('.dim'))
     else:
@@ -373,7 +373,7 @@ def coreg2(master, slave, outfile, logfile, config_dict):
         )
 
     # do check routine
-    return_code = h.check_out_dimap(outfile)
+    # return_code = h.check_out_dimap(outfile)
     if return_code == 0:
         return str(outfile.with_suffix('.dim'))
     else:
@@ -425,7 +425,7 @@ def coherence(infile, outfile, logfile, config_dict):
         )
 
     # do check routine
-    return_code = h.check_out_dimap(outfile)
+    # return_code = h.check_out_dimap(outfile)
     if return_code == 0:
         return str(outfile.with_suffix('.dim'))
     else:

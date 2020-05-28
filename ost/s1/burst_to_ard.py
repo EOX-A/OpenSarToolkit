@@ -1,4 +1,3 @@
-import json
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -24,7 +23,7 @@ def create_polarimetric_layers(
     :param config_dict:
     :return:
     """
-
+    ard = config_dict['processing']['single_ARD']
     # temp dir for intermediate files
     with TemporaryDirectory(prefix=f"{config_dict['temp_dir']}/") as temp:
         temp = Path(temp)
@@ -55,7 +54,11 @@ def create_polarimetric_layers(
         # run geocoding
         try:
             common.terrain_correction(
-                out_haa.with_suffix('.dim'), out_htc, haa_tc_log, config_dict
+                out_haa.with_suffix('.dim'),
+                out_htc,
+                haa_tc_log,
+                ard['resolution'],
+                ard['dem']
             )
         except (GPTRuntimeError, InvalidFileError) as error:
             logger.info(error)
@@ -73,7 +76,6 @@ def create_polarimetric_layers(
                 dest.write(array)
 
         # move to final destination
-        ard = config_dict['processing']['single_ARD']
         h.move_dimap(
             out_htc, out_dir.joinpath(f'{burst_prefix}_pol'), ard['to_tif']
         )
@@ -187,7 +189,11 @@ def create_backscatter_layers(
         # run terrain correction on calibrated/speckle filtered/db  input
         try:
             common.terrain_correction(
-                out_cal.with_suffix('.dim'), out_tc, tc_log, config_dict
+                out_cal.with_suffix('.dim'),
+                out_tc,
+                tc_log,
+                ard['resolution'],
+                ard['dem']
             )
         except (GPTRuntimeError, InvalidFileError) as error:
             logger.info(error)
@@ -326,7 +332,11 @@ def create_coherence_layers(
         # run geocoding
         try:
             common.terrain_correction(
-                out_coh.with_suffix('.dim'), out_tc, tc_log, config_dict
+                out_coh.with_suffix('.dim'),
+                out_tc,
+                tc_log,
+                ard['resolution'],
+                ard['dem']
             )
         except (GPTRuntimeError, InvalidFileError) as error:
             logger.info(error)
