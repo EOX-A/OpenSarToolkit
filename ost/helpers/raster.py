@@ -528,12 +528,13 @@ def create_timeseries_animation(
         opj(track_ts_folder, '*{}.tif'.format(product_list[0]))))
     outfiles = []
     # for coherence it must be one less
-    if 'coh.VV' in product_list or 'coh.VH' in product_list:
+    if 'coh_VV' in product_list or 'coh_VH' in product_list:
         nr_of_products = nr_of_products - 1
+
     # Iterate over the tifs from the timeseries
     for i in range(nr_of_products):
         filelist = [glob.glob(
-            opj(track_ts_folder, '{}*{}*tif'.format(str('%02d' % i + 1), product))
+            opj(track_ts_folder, '{}_*_{}*tif'.format(str('%02d' % (i + 1)), product))
         )[0]
                     for product in product_list
                     ]

@@ -14,6 +14,10 @@ Changelog
 * adjusted burst processing to EOX-A release
 * adjusted ard_json for slc to match PhiLab
 * added Coherence test and updateted polarimetric test
+* Animation from time series update
+    * will fix properly in 0.10 along with the new mosaicing etc.
+* Quickfix for GRD VV VH timeseries
+    * will fix properly in 0.10 along with the new mosaicing etc.
 
 -----
 0.9.6

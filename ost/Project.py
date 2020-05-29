@@ -843,11 +843,15 @@ class Sentinel1Batch(Sentinel1):
                                      duration=1,
                                      add_dates=False
                                      ):
+        self.timeseries_dirs = [
+            Path.joinpath(self.processing_dir, track, 'Timeseries')
+            for track in self.inventory.relativeorbit.unique()
+        ]
         self.animations_dir = Path.joinpath(self.processing_dir, 'Animations')
         for ts_dir in self.timeseries_dirs:
             ras.create_timeseries_animation(
                 track_ts_folder=ts_dir,
-                product_list=['BS', 'BS'],
+                product_list=['bs_VV', 'bs_VH'],
                 out_folder=self.animations_dir,
                 shrink_factor=shrink_factor,
                 duration=duration,

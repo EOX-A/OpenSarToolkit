@@ -348,7 +348,7 @@ def ards_to_timeseries(
         # get the burst directory
         track_dir = opj(processing_dir, track)
 
-        for pol in config_dict['processing']['single_ARD']['polarisation']:
+        for pol in ['VV', 'VH']:
 
             # see if there is actually any imagery in thi polarisation
             list_of_files = sorted(glob.glob(
