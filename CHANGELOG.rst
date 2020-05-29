@@ -13,6 +13,7 @@ Changelog
 * updated SLC routine to current PhiLab version
 * adjusted burst processing to EOX-A release
 * adjusted ard_json for slc to match PhiLab
+* added Coherence test and updateted polarimetric test
 
 -----
 0.9.6

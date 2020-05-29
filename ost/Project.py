@@ -329,6 +329,7 @@ class Sentinel1(Generic):
             # ask for username and password
             uname = self.uname
             pword = self.scihub_pword
+            asf_pword = self.asf_pword
 
         # do the search
         if outfile == 'full.inventory.gpkg':
@@ -425,9 +426,13 @@ class Sentinel1(Generic):
                  ):
         if uname is None:
             uname = self.uname
-        if pword is None:
+        if pword is None and mirror is None:
             pword = self.asf_pword
             mirror = 2
+        elif pword is None:
+            pword = self.scihub_pword
+        elif  pword is None and mirror == 2:
+            pword = self.asf_pword
 
         # if an old inventory exists drop download_path
         if 'download_path' in inventory_df:
