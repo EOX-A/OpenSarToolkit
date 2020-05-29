@@ -25,9 +25,9 @@ def create_s1_product_specs(product_type='*', polarisation='*', beam='*'):
     # bring product type, polarisation and beam to query format
     if product_type == 'GRD':
         product_type = 'GRD_HD,GRD_MD,GRD_MS,GRD_HS'
-    if polarisation == 'VV,VH':
+    if polarisation == 'VV,VH' or polarisation == 'VV VH':
         polarisation = 'VV%2BVH'
-    if polarisation == 'HH,HV':
+    if polarisation == 'HH,HV' or polarisation == ' HH HV':
         polarisation = 'HH%2BHV'
     if polarisation == '*':
         polarisation = 'VV%2BVH'

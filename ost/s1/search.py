@@ -499,8 +499,7 @@ def catalogue(
         gdf = _query_scihub(apihub, opener, query_string, crs=crs)
     elif 'asf' in base_url:
         url = "%s%s" % (base_url, query_string)
-        logger.debug("query catalog url %s", url)
-        logger.info(url)
+        logger.info("Query catalog url: %s", url)
         try:
             response = json.loads(get_response(url, timeout=remote_timeout))
         except:

@@ -451,7 +451,7 @@ class Sentinel1(Generic):
                 mirror=mirror,
                 concurrent=concurrent,
                 uname=uname,
-                pword=mirror
+                pword=pword
             )
 
     def create_burst_inventory(self,
