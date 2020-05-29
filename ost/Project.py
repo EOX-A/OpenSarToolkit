@@ -637,7 +637,7 @@ class Sentinel1Batch(Sentinel1):
             Path.joinpath(self.processing_dir, track, 'Timescan')
             for track in self.inventory.relativeorbit.unique()
         ]
-        self.animations_dir = opj(self.processing_dir, 'Animations')
+        self.animations_dir = Path.joinpath(self.processing_dir, 'Animations')
 
     # ---------------------------------------
     # methods
