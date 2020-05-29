@@ -79,8 +79,10 @@ def _execute_grd_batch(
     track, list_of_scenes = list_of_scenes
     if subset is not None:
         acq_poly = None
-        sub_boudns = loads(subset).bounds
-        sub_poly = box(sub_boudns[0], sub_boudns[1], sub_boudns[2], sub_boudns[3])
+        sub_bounds = loads(subset).bounds
+        sub_poly = box(
+            sub_bounds[0], sub_bounds[1], sub_bounds[2], sub_bounds[3]
+        )
         for scene in list_of_scenes:
             if acq_poly is None:
                 acq_poly = Sentinel1Scene(scene).get_product_polygon(

@@ -201,16 +201,22 @@ class Sentinel1Scene:
 
     def get_path(self, download_dir=None, data_mount=None):
         path = None
+        product_dl_path = None
         if download_dir is not None:
             if isinstance(download_dir, str):
                 download_dir = Path(download_dir)
-            product_dl_path = self._download_path(download_dir=download_dir, mkdir=False)
+            product_dl_path = self._download_path(
+                download_dir=download_dir, mkdir=False
+            )
             if product_dl_path.with_suffix('.downloaded').exists():
                 path = product_dl_path
 
         if path is None:
             raise FileNotFoundError(
-                'No product path found for: {}'.format(self.scene_id)
+                'No product path found for: {}, {}'.format(
+                    self.scene_id,
+                    product_dl_path,
+                )
             )
         return path
 

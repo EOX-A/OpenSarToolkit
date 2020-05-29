@@ -429,10 +429,10 @@ class Sentinel1(Generic):
         if pword is None and mirror is None:
             pword = self.asf_pword
             mirror = 2
+        elif pword is None and mirror == 2:
+            pword = self.asf_pword
         elif pword is None:
             pword = self.scihub_pword
-        elif  pword is None and mirror == 2:
-            pword = self.asf_pword
 
         # if an old inventory exists drop download_path
         if 'download_path' in inventory_df:

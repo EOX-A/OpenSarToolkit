@@ -171,6 +171,7 @@ def batch_download(inventory_df,
 
     # initialize check variables and loop until fulfilled
     asf_list = []
+    check_counter = 0
     for scene_id in scenes:
 
         # initialize scene instance and get destination filepath
@@ -179,13 +180,13 @@ def batch_download(inventory_df,
 
         # check if already downloaded
         if Path(f'{filepath}.downloaded').exists():
+            check_counter += 1
             logger.info(f'{scene.scene_id} has been already downloaded.')
             continue
 
         # append to list
         asf_list.append([scene.asf_url(), filepath, uname, pword])
 
-    check_counter = 0
     # if list is not empty, do parallel download
     if asf_list:
         executor = Executor(max_workers=max_workers, executor=executor_type)
