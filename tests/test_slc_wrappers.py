@@ -127,7 +127,6 @@ def test_coherence(s1_slc_ost_master,
 
 # @pytest.mark.skip(reason="Takes too long skip for now!")
 def test_burst_ha_alpha(
-        s1_slc_master,
         s1_slc_ost_master,
         slc_project_class,
 ):
