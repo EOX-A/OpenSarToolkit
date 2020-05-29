@@ -2,6 +2,7 @@ import itertools
 
 # some more libs for plotting and DB connection
 import fiona
+import pandas as pd
 import geopandas as gpd
 import logging
 
@@ -32,15 +33,20 @@ def _remove_double_entries(inventory_df):
 
     # filter footprint data frame for obit direction and polarisation &
     # get unqiue entries
-    idx = inventory_df.groupby(
-        inventory_df['identifier'].str.slice(0, 63))[
-              'ingestiondate'].transform(max) == inventory_df['ingestiondate']
+    if not pd.isna(inventory_df['ingestiondate']).all():
+        if inventory_df['ingestiondate'].empty() is False:
+            idx = inventory_df.groupby(
+                inventory_df['identifier'].str.slice(0, 63))[
+                      'ingestiondate'].transform(max) == inventory_df['ingestiondate']
 
-    # re-initialize GDF geometry due to groupby function
-    crs = fiona.crs.from_epsg(4326)
-    gdf = gpd.GeoDataFrame(inventory_df[idx], geometry='geometry', crs=crs)
-    logger.info('{} frames remain after double entry removal'.format(
-        len(inventory_df[idx])))
+            # re-initialize GDF geometry due to groupby function
+            crs = fiona.crs.from_epsg(4326)
+            gdf = gpd.GeoDataFrame(inventory_df[idx], geometry='geometry', crs=crs)
+            logger.info('{} frames remain after double entry removal'.format(
+                len(inventory_df[idx])))
+    else:
+        gdf = inventory_df
+
     return gdf
 
 
@@ -66,8 +72,11 @@ def _remove_outside_aoi(aoi_gdf, inventory_df):
     cols = inventory_df.columns
 
     # 1) get only intersecting footprints (double, since we do this before)
-    inventory_df = gpd.sjoin(inventory_df, aoi_gdf,
-                             how='inner', op='intersects')
+    inventory_df = gpd.sjoin(inventory_df,
+                             aoi_gdf,
+                             how='inner',
+                             op='intersects'
+                             )
 
     # if aoi  gdf has an id field we need to rename the changed id_left field
     if 'id_left' in inventory_df.columns.tolist():
@@ -503,14 +512,12 @@ def search_refinement(aoi,
 
         # we do a first check if the scenes do not fully cover the AOI
         if (intersect_area <= aoi_area - area_reduce) and complete_coverage:
-            print(' WARNING: Set of footprints does not fully cover AOI. ')
+            logger.warning('Set of footprints does not fully cover AOI. ')
 
         # otherwise we go on
         else:
-
             # apply the different sorting steps
             inventory_refined = _remove_double_entries(inv_df_sorted)
-
             inventory_refined = _remove_outside_aoi(aoi_gdf, inventory_refined)
 
             if orb == 'ASCENDING':

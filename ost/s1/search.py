@@ -61,6 +61,7 @@ from urllib.error import URLError
 import xml.dom.minidom
 import dateutil.parser
 from pathlib import Path
+import json
 
 # import external modules
 import geopandas as gpd
@@ -69,31 +70,111 @@ from shapely.wkt import dumps, loads
 # internal OST libs
 from ost.helpers.db import pgHandler
 from ost.helpers import scihub
+from ost.helpers.helpers import get_response
 
 # set up logger
 logger = logging.getLogger(__name__)
 
 
-def _query_scihub(apihub, opener, query):
+SEARCH_GDF_COLUMNS = columns = [
+    'identifier',
+    'polarisationmode',
+    'orbitdirection',
+    'acquisitiondate',
+    'relativeorbitnumber',
+    'orbitnumber',
+    'producttype',
+    'slicenumber',
+    'size',
+    'beginposition',
+    'endposition',
+    'lastrelativeorbitnumber',
+    'lastorbitnumber',
+    'uuid',
+    'platformidentifier',
+    'missiondatatakeid',
+    'swathidentifier',
+    'ingestiondate',
+    'sensoroperationalmode',
+    'footprint'
+]
+
+ASF_SEARCH_PRODUCT_SCIHUB_MAP = {
+    'beamMode': 'sensoroperationalmode',
+    'browse': None,
+    'canInSAR': None,
+    'dataset': 'platformidentifier',
+    'downloadUrl': None,
+    'faradayRotation': None,
+    'fileName': None,
+    'flightDirection': 'orbitdirection',
+    'flightLine': None,
+    'frame': 'slicenumber',
+    'granuleName': 'identifier',
+    'groupID': None,
+    'instrument': None,
+    'missionName': None,
+    'offNadirAngle': None,
+    'orbit': 'orbitnumber',
+    'path': 'relativeorbitnumber',
+    'pointingAngle': None,
+    'polarization': 'polarisationmode',
+    'productID': None,
+    'productType': 'producttype',
+    'productTypeDisplay': None,
+    'sizeMB': 'size',
+    'stackSize': None,
+    'startTime': 'beginposition',
+    'thumb': None,
+    'wkt': 'footprint',
+    'wkt_unwrapped': None
+}
+
+
+def _map_asf_to_scihub_cat_response(asf_response):
+    acq_list = []
+    for product in asf_response:
+        formated_product = {}
+        for scihub_key in SEARCH_GDF_COLUMNS:
+            for asf_key, scihub_item in ASF_SEARCH_PRODUCT_SCIHUB_MAP.items():
+                if scihub_key == scihub_item:
+                    if 'productType' == asf_key and 'GRD' in product['productType']:
+                        product['productType'] = 'GRD'
+                    if 'wkt' == asf_key:
+                        product['wkt'] = loads(product['wkt'])
+                    if 'polarization' == asf_key:
+                        product['polarization'] = product['polarization'].replace('+', ' ')
+                    if 'startTime' == asf_key:
+                        formated_product['acquisitiondate'] = product['startTime'].split('T')[0]
+                    formated_product[scihub_key] = product[asf_key]
+        acq_list.append(formated_product)
+
+    return acq_list
+
+
+def _query_asf(response, crs={'init': 'epsg:4326'}):
+
+    geo_df = _create_search_gdf(crs=crs)
+
+    acq_list = _map_asf_to_scihub_cat_response(response)
+
+    # transfoem all results from that page to a gdf
+    gdf = gpd.GeoDataFrame(acq_list,
+                           columns=SEARCH_GDF_COLUMNS,
+                           crs=crs,
+                           geometry='footprint'
+                           )
+
+    return geo_df.append(gdf)
+
+
+def _query_scihub(apihub, opener, query, crs={'init': 'epsg:4326'}):
     """
     Get the data from the scihub catalogue
     and write it to a GeoPandas GeoDataFrame
     """
 
-    # create empty GDF
-    columns = [
-        'identifier', 'polarisationmode', 'orbitdirection',
-        'acquisitiondate', 'relativeorbitnumber', 'orbitnumber',
-        'producttype', 'slicenumber', 'size', 'beginposition',
-        'endposition', 'lastrelativeorbitnumber', 'lastorbitnumber',
-        'uuid', 'platformidentifier', 'missiondatatakeid',
-        'swathidentifier', 'ingestiondate', 'sensoroperationalmode',
-        'footprint'
-        ]
-
-    crs = {'init': 'epsg:4326'}
-    geo_df = gpd.GeoDataFrame(columns=columns, crs=crs,
-                              geometry='footprint')
+    geo_df = _create_search_gdf(crs=crs)
 
     # we need this for the paging
     index = 0
@@ -101,7 +182,6 @@ def _query_scihub(apihub, opener, query):
     next_page = 1
 
     while next_page:
-
         # construct the final url
         url = apihub + query + "&rows={}&start={}".format(rows, index)
         try:
@@ -109,12 +189,12 @@ def _query_scihub(apihub, opener, query):
             req = opener.open(url)
         except URLError as err:
             if hasattr(err, 'reason'):
-                print(' We failed to connect to the server.')
-                print(' Reason: ', err.reason)
+                logger.info('We failed to connect to the server.')
+                logger.info('Reason: ', err.reason)
                 sys.exit()
             elif hasattr(err, 'code'):
-                print(' The server couldn\'t fulfill the request.')
-                print(' Error code: ', err.code)
+                logger.info('The server couldn\'t fulfill the request.')
+                logger.info('Error code: ', err.code)
                 sys.exit()
         else:
             # write the request to to the response variable
@@ -185,8 +265,11 @@ def _query_scihub(apihub, opener, query):
                             )
 
         # transfoem all results from that page to a gdf
-        gdf = gpd.GeoDataFrame(acq_list, columns=columns,
-                               crs=crs, geometry='footprint')
+        gdf = gpd.GeoDataFrame(acq_list,
+                               columns=SEARCH_GDF_COLUMNS,
+                               crs=crs,
+                               geometry='footprint'
+                               )
 
         # append the gdf to the full gdf
         geo_df = geo_df.append(gdf)
@@ -242,7 +325,7 @@ def _to_shapefile(gdf, outfile, append=False):
     if len(gdf.index) >= 1:
         gdf.to_file(outfile)
     else:
-        print('No scenes found in this AOI during this time')
+        logger.info('No scenes found in this AOI during this time')
 
 
 def _to_geopackage(gdf, outfile, append=False):
@@ -285,7 +368,7 @@ def _to_geopackage(gdf, outfile, append=False):
     if len(gdf.index) > 0:
         gdf.to_file(outfile, driver='GPKG')
     else:
-        print('No scenes found in this AOI during this time')
+        logger.info('No scenes found in this AOI during this time')
 
 
 def _to_postgis(gdf, db_connect, outtable):
@@ -343,8 +426,12 @@ def _to_postgis(gdf, db_connect, outtable):
             db_connect.pgDateline(outtable, uuid)
             maxid += 1
         else:
-            print('Scene {} already exists within table {}.'.format(identifier,
-                                                                    outtable))
+            logger.info(
+                'Scene {} already exists within table {}.'.format(
+                    identifier,
+                    outtable
+                )
+            )
 
     logger.info('Inserted {} entries into {}.'.format(len(gdf), outtable))
     logger.info('Table {} now contains {} entries.'.format(outtable,
@@ -385,8 +472,16 @@ def check_availability(inventory_gdf, download_dir, data_mount):
     return inventory_gdf
 
 
-def scihub_catalogue(query_string, output, append=False,
-                     uname=None, pword=None):
+def catalogue(
+        query_string,
+        output,
+        append=False,
+        uname=None,
+        pword=None,
+        base_url='https://api-prod-private.asf.alaska.edu/services/search/param?',
+        remote_timeout=5,
+        crs={'init': 'epsg:4326'}
+):
     '''This is the main search function on scihub
 
 
@@ -394,8 +489,63 @@ def scihub_catalogue(query_string, output, append=False,
     # retranslate Path object to string
     output = str(output)
 
+    if 'scihub' in base_url:
+        # get connected to scihub
+        opener = scihub.connect(base_url, uname, pword)
+        action = 'search?q='
+        apihub = base_url + action
+
+        # get the catalogue in a dict
+        gdf = _query_scihub(apihub, opener, query_string, crs=crs)
+    elif 'asf' in base_url:
+        url = "%s%s" % (base_url, query_string)
+        logger.info("Query catalog url: %s", url)
+        try:
+            response = json.loads(get_response(url, timeout=remote_timeout))
+        except:
+            try:
+                url = url.replace('jsonlite', 'jsonlite2')
+                response = json.loads(get_response(url, timeout=remote_timeout))
+            except Exception as e:
+                raise e
+        # get the catalogue in a dict
+        gdf = _query_asf(response["results"], crs=crs)
+    else:
+        raise ValueError('Wrong search url: {}'.format(base_url))
+
+    if output[-4:] == ".shp":
+        logger.info('writing inventory data to shape file: {}'.format(output))
+        _to_shapefile(gdf, output, append)
+    elif output[-5:] == ".gpkg":
+        logger.info(f'writing inventory data to geopackage file: {output}')
+        _to_geopackage(gdf, output, append)
+    else:
+        logger.info('writing inventory data toPostGIS'
+                    ' table: {}'.format(output))
+        db_connect = pgHandler()
+        _to_postgis(gdf, db_connect, output)
+
+
+def scihub_catalogue(
+        query_string,
+        output,
+        append=False,
+        uname=None,
+        pword=None,
+        base_url='https://scihub.copernicus.eu/dhus/'
+        ):
+    '''This is the main search function on scihub
+
+
+    '''
+    logger.warning(
+        'This is an older function use search.catalogue function instead!'
+        'Will remove this function in 0.10'
+    )
+    # retranslate Path object to string
+    output = str(output)
+
     # get connected to scihub
-    base_url = 'https://scihub.copernicus.eu/dhus/'
     opener = scihub.connect(base_url, uname, pword)
     action = 'search?q='
     apihub = base_url + action
@@ -414,6 +564,15 @@ def scihub_catalogue(query_string, output, append=False,
                     ' table: {}'.format(output))
         db_connect = pgHandler()
         _to_postgis(gdf, db_connect, output)
+
+
+def _create_search_gdf(crs={'init': 'epsg:4326'}):
+    # create empty GDF
+
+    return gpd.GeoDataFrame(columns=SEARCH_GDF_COLUMNS,
+                            crs=crs,
+                            geometry='footprint'
+                            )
 
 
 if __name__ == "__main__":

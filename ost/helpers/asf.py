@@ -17,40 +17,6 @@ from ost.s1.s1scene import Sentinel1Scene as S1Scene
 logger = logging.getLogger(__name__)
 
 
-# we need this class for earthdata access
-class SessionWithHeaderRedirection(requests.Session):
-    """ A class that helps connect to NASA's Earthdata
-
-    """
-
-    AUTH_HOST = 'urs.earthdata.nasa.gov'
-
-    def __init__(self, username, password):
-        super().__init__()
-        self.auth = (username, password)
-
-    # Overrides from the library to keep headers when redirected to or from
-    # the NASA auth host.
-
-    def rebuild_auth(self, prepared_request, response):
-
-        headers = prepared_request.headers
-        url = prepared_request.url
-
-        if 'Authorization' in headers:
-
-            original_parsed = requests.utils.urlparse(response.request.url)
-            redirect_parsed = requests.utils.urlparse(url)
-
-            if (original_parsed.hostname != redirect_parsed.hostname) and \
-                redirect_parsed.hostname != self.AUTH_HOST and \
-                    original_parsed.hostname != self.AUTH_HOST:
-
-                del headers['Authorization']
-
-        return
-
-
 def check_connection(uname, pword):
     '''A helper function to check if a connection can be established
     Args:
@@ -122,14 +88,14 @@ def s1_download(argument_list):
     )
     urlreq.install_opener(opener)
 
-    logger.debug('INFO: Downloading scene to: {}'.format(filename))
+    logger.info('INFO: Downloading scene to: {}'.format(filename))
     # submit the request using the session
     try:
         response = urlreq.urlopen(url=url)
         # raise an exception in case of http errors
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            logger.debug(
+            logger.info(
                 'Product %s missing from the archive, continuing.',
                 filename.split('/')[-1]
             )
@@ -154,7 +120,11 @@ def s1_download(argument_list):
         first_byte = 0
 
     # actual download
-    with open(filename, "ab") as file:
+    with requests.Session() as s, open(filename, "ab") as file:
+        s.auth = (uname, pword)
+        response_1 = s.request('get', url)
+        response = s.get(response_1.url, auth=(uname, pword), stream=True)
+
         if total_length is None:
             file.write(response.content)
         else:
@@ -201,6 +171,7 @@ def batch_download(inventory_df,
 
     # initialize check variables and loop until fulfilled
     asf_list = []
+    check_counter = 0
     for scene_id in scenes:
 
         # initialize scene instance and get destination filepath
@@ -209,13 +180,13 @@ def batch_download(inventory_df,
 
         # check if already downloaded
         if Path(f'{filepath}.downloaded').exists():
+            check_counter += 1
             logger.info(f'{scene.scene_id} has been already downloaded.')
             continue
 
         # append to list
         asf_list.append([scene.asf_url(), filepath, uname, pword])
 
-    check_counter = 0
     # if list is not empty, do parallel download
     if asf_list:
         executor = Executor(max_workers=max_workers, executor=executor_type)

@@ -304,9 +304,9 @@ def visualise_rgb(filepath, shrink_factor=25):
 
 def get_min(file):
 
-    mins = {'bs.VV': -20, 'bs.VH': -25, 'bs.HH': -20, 'bs.HV': -25,
-            'coh.VV': 0.1, 'coh.VH': 0.1,
-            'pol.Alpha': 60, 'pol.Entropy': 0.1, 'pol.Anisotropy': 0.1,
+    mins = {'bs_VV': -20, 'bs_VH': -25, 'bs_HH': -20, 'bs_HV': -25,
+            'coh_VV': 0.1, 'coh_VH': 0.1,
+            'pol_Alpha': 60, 'pol.Entropy': 0.1, 'pol_Anisotropy': 0.1,
             'coh_IW1_VV': 0.1, 'coh_IW2_VV': 0.1, 'coh_IW3_VV': 0.1,
             'coh_IW1_VH': 0.1, 'coh_IW2_VH': 0.1, 'coh_IW3_VH': 0.1}
 
@@ -314,11 +314,12 @@ def get_min(file):
         if key in file:
             return items
 
+
 def get_max(file):
 
-    maxs = {'bs.VV': 0, 'bs.VH': -12, 'bs.HH': 0, 'bs.HV': -5,
-            'coh.VV': 0.8, 'coh.VH': 0.75,
-            'pol.Alpha': 80, 'pol.Entropy': 0.8, 'pol.Anisotropy': 0.8,
+    maxs = {'bs_VV': 0, 'bs_VH': -12, 'bs_HH': 0, 'bs_HV': -5,
+            'coh_VV': 0.8, 'coh_VH': 0.75,
+            'pol_Alpha': 80, 'pol_Entropy': 0.8, 'pol_Anisotropy': 0.8,
             'coh_IW1_VV': 0.8, 'coh_IW2_VV': 0.8, 'coh_IW3_VV': 0.8,
             'coh_IW1_VH': 0.75, 'coh_IW2_VH': 0.75, 'coh_IW3_VH': 0.75}
 
@@ -349,8 +350,17 @@ def calc_max(band, stretch='minmax'):
     return band_max
 
 
-def create_rgb_jpeg(filelist, outfile=None, shrink_factor=1, resampling_factor=5, plot=False,
-                   minimum_list=None, maximum_list=None, date=None, filetype=None, stretch=False):
+def create_rgb_jpeg(filelist,
+                    outfile=None,
+                    shrink_factor=1,
+                    resampling_factor=5,
+                    plot=False,
+                    minimum_list=None,
+                    maximum_list=None,
+                    date=None,
+                    filetype=None,
+                    stretch=False
+                    ):
 
     import matplotlib.pyplot as plt
 
@@ -366,7 +376,7 @@ def create_rgb_jpeg(filelist, outfile=None, shrink_factor=1, resampling_factor=5
         new_height = int(src.height/shrink_factor)
         new_width = int(src.width/shrink_factor)
         out_meta.update(height=new_height, width=new_width)
-        count=1
+        count = 1
         
         layer1 = src.read(
                 out_shape=(src.count, new_height, new_width),
@@ -393,7 +403,7 @@ def create_rgb_jpeg(filelist, outfile=None, shrink_factor=1, resampling_factor=5
                 minimum_list.append(get_min(filelist[1]))
                 maximum_list.append(get_max(filelist[1]))
             layer2[layer2 == 0] = np.nan
-            count=3
+            count = 3
             
     if len(filelist) == 2:    # that should be the BS ratio case
         layer3 = np.subtract(layer1, layer2)
@@ -419,8 +429,11 @@ def create_rgb_jpeg(filelist, outfile=None, shrink_factor=1, resampling_factor=5
                     int(out_meta['width']),
                     int(count)))
     
-    arr[:, :, 0] = scale_to_int(layer1, minimum_list[0],
-                                maximum_list[0], 'uint8')
+    arr[:, :, 0] = scale_to_int(layer1,
+                                minimum_list[0],
+                                maximum_list[0],
+                                'uint8'
+                                )
     if len(filelist) > 1:
         arr[:, :, 1] = scale_to_int(layer2, minimum_list[1],
                                     maximum_list[1], 'uint8')
@@ -435,10 +448,11 @@ def create_rgb_jpeg(filelist, outfile=None, shrink_factor=1, resampling_factor=5
                          'dtype': 'uint8',
                          'count': count})
     else:
-        out_meta.update({'driver': 'JPEG',
-                     'dtype': 'uint8',
-                     'count': count})
-
+        out_meta.update({
+            'driver': 'JPEG',
+            'dtype': 'uint8',
+            'count': count
+        })
     
     if outfile:    # write array to disk
         with rasterio.open(outfile, 'w', **out_meta) as out:
@@ -454,51 +468,6 @@ def create_rgb_jpeg(filelist, outfile=None, shrink_factor=1, resampling_factor=5
             
     if plot:
         plt.imshow(arr)
-
-    
-def create_timeseries_animation(timeseries_folder, product_list, out_folder,
-                                shrink_factor=1, resampling_factor=5, duration=1, add_dates=False, prefix=False):
-
-    
-    nr_of_products = len(glob.glob(
-        opj(timeseries_folder, '*{}.tif'.format(product_list[0]))))
-    outfiles = []
-    # for coherence it must be one less
-    if 'coh.VV' in product_list or 'coh.VH' in product_list:
-        nr_of_products == nr_of_products - 1
-        
-    for i in range(nr_of_products):
-
-        filelist = [glob.glob(opj(timeseries_folder, '{}.*{}*tif'.format(i + 1, product)))[0] for product in product_list]
-        dates = os.path.basename(filelist[0]).split('.')[1]    
-        
-        if add_dates:
-            date = dates
-        else:
-            date = None
-        
-        create_rgb_jpeg(filelist, 
-                        opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)),
-                        shrink_factor,
-                        resampling_factor,
-                        date=date)
-
-        outfiles.append(opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)))
-
-    # create gif
-    if prefix:
-        gif_name = '{}_{}_ts_animation.gif'.format(prefix,product_list[0])
-    else:
-        gif_name = '{}_ts_animation.gif'.format(product_list[0])
-    with imageio.get_writer(opj(out_folder, gif_name), mode='I',
-        duration=duration) as writer:
-
-        for file in outfiles:
-            image = imageio.imread(file)
-            writer.append_data(image)
-            os.remove(file)
-            if os.path.isfile(file + '.aux.xml'):
-                os.remove(file + '.aux.xml')
 
 
 def np_binary_erosion(
@@ -543,3 +512,55 @@ def np_binary_erosion(
             binary_erosion[row+1, col+1] = np.min(
                 input_pad_array[row:row+3, col:col+3][struc_mask])
     return binary_erosion[1:rows+1, 1:cols+1]
+
+
+def create_timeseries_animation(
+        track_ts_folder,
+        product_list,
+        out_folder,
+        shrink_factor=1,
+        duration=1,
+        add_dates=False
+):
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder, exist_ok=True)
+    nr_of_products = len(glob.glob(
+        opj(track_ts_folder, '*{}.tif'.format(product_list[0]))))
+    outfiles = []
+    # for coherence it must be one less
+    if 'coh_VV' in product_list or 'coh_VH' in product_list:
+        nr_of_products = nr_of_products - 1
+
+    # Iterate over the tifs from the timeseries
+    for i in range(nr_of_products):
+        filelist = [glob.glob(
+            opj(track_ts_folder, '{}_*_{}*tif'.format(str('%02d' % (i + 1)), product))
+        )[0]
+                    for product in product_list
+                    ]
+        dates = str(os.path.basename(filelist[0])).split('_')[1]
+        if add_dates:
+            date = dates
+        else:
+            date = None
+
+        create_rgb_jpeg(
+            filelist,
+            opj(out_folder, '{}_{}.jpeg'.format(i+1, dates)),
+            shrink_factor,
+            date=date
+        )
+        outfiles.append(opj(out_folder, '{}_{}.jpeg'.format(i+1, dates)))
+    out_gif_name = str(track_ts_folder).split('/')[-2]+'_ts_animation.gif'
+    # create gif
+    with imageio.get_writer(
+            opj(out_folder, out_gif_name),
+            mode='I',
+            duration=duration
+    ) as writer:
+        for file in outfiles:
+            image = imageio.imread(file)
+            writer.append_data(image)
+            os.remove(file)
+            if os.path.isfile(file + '.aux.xml'):
+                os.remove(file + '.aux.xml')

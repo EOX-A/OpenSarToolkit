@@ -7,6 +7,7 @@
             "product_type": "RTC-gamma0",
             "polarisation": "VV, VH, HH, HV",
             "to_db": false,
+            "to_tif": false,
             "remove_speckle": true,
             "speckle_filter": {
                 "filter": "Refined Lee",
@@ -45,6 +46,8 @@
             },            
             "coherence": true,
             "coherence_bands": "VV, VH, HH, HV",
+            "coherence_azimuth": 4,
+            "coherence_range": 20,
             "H-A-Alpha": true
         },
         "time-series_ARD": {

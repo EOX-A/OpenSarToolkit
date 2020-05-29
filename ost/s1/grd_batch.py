@@ -1,6 +1,7 @@
 import os
 from os.path import join as opj
 import numpy as np
+import pandas as pd
 import json
 import glob
 import itertools
@@ -79,8 +80,10 @@ def _execute_grd_batch(
     track, list_of_scenes = list_of_scenes
     if subset is not None:
         acq_poly = None
-        sub_boudns = loads(subset).bounds
-        sub_poly = box(sub_boudns[0], sub_boudns[1], sub_boudns[2], sub_boudns[3])
+        sub_bounds = loads(subset).bounds
+        sub_poly = box(
+            sub_bounds[0], sub_bounds[1], sub_bounds[2], sub_bounds[3]
+        )
         for scene in list_of_scenes:
             if acq_poly is None:
                 acq_poly = Sentinel1Scene(scene).get_product_polygon(
@@ -98,7 +101,7 @@ def _execute_grd_batch(
         elif not acq_poly.intersects(sub_poly):
             for i, row in inventory_df.iterrows():
                 if row.identifier == Sentinel1Scene(scene).scene_id:
-                    logger.debug(
+                    logger.info(
                         'Scene does not intersect the subset %s',
                         Sentinel1Scene(scene).scene_id
                     )
@@ -316,34 +319,36 @@ def ards_to_timeseries(
                             )
 
     if ard['create_ls_mask']:
-        for track in inventory_df.relativeorbit.unique():
+        logger.warning('create_ls_mask at timeseries level still not working')
 
-            # get the burst directory
-            track_dir = opj(processing_dir, track)
-            list_of_layover = inventory_df['out_ls_mask'].to_list()
-            counter = 0
-            for e in list_of_layover:
-                if np.isnan(e):
-                    counter += 1
-
-            if counter == len(list_of_layover):
-                logger.debug('No layerover masks found skipping!')
-            else:
-                # layover/shadow mask
-                out_ls = opj(track_dir, '{}.ls_mask.tif'.format(track))
-
-                logger.info('Creating common Layover/Shadow mask for track {}'.format(track))
-                ts_ls_mask.mt_layover(filelist=list_of_layover,
-                                      outfile=out_ls,
-                                      temp_dir=temp_dir,
-                                      extent=extent,
-                                      )
+        # for track in inventory_df.relativeorbit.unique():
+        #
+        #     # get the burst directory
+        #     track_dir = opj(processing_dir, track)
+        #     list_of_layover = inventory_df['out_ls_mask'].to_list()
+        #     counter = 0
+        #     for e in list_of_layover:
+        #         if pd.isnull(e):
+        #             counter += 1
+        #
+        #     if counter == len(list_of_layover):
+        #         logger.info('No layerover masks found skipping!')
+        #     else:
+        #         # layover/shadow mask
+        #         out_ls = opj(track_dir, '{}.ls_mask.tif'.format(track))
+        #
+        #         logger.info('Creating common Layover/Shadow mask for track {}'.format(track))
+        #         ts_ls_mask.mt_layover(filelist=list_of_layover,
+        #                               outfile=out_ls,
+        #                               temp_dir=temp_dir,
+        #                               extent=extent,
+        #                               )
 
     for track in inventory_df.relativeorbit.unique():
         # get the burst directory
         track_dir = opj(processing_dir, track)
 
-        for pol in ['VV', 'VH', 'HH', 'HV']:
+        for pol in ['VV', 'VH']:
 
             # see if there is actually any imagery in thi polarisation
             list_of_files = sorted(glob.glob(

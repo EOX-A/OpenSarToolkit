@@ -1,25 +1,45 @@
 import os
 from shapely.geometry import box
+
 from ost.s1.s1scene import Sentinel1Scene
+from ost.helpers.settings import HERBERT_USER
 
 
-def test_s1scene_metadata(s1_id):
+def test_s1scene_metadata(s1_id, s1_mai_2020_id, grd_project_class):
     s1 = Sentinel1Scene(s1_id)
-    control_id = 'S1A_IW_GRDH_1SDV_20141003T040550_20141003T040619_002660_002F64_EC04'
+    control_id = 'S1B_IW_GRDH_1SDV_20180813T054020_20180813T054045_012240_0168D6_B775'
     control_dict = {'Scene_Identifier':
-                        'S1A_IW_GRDH_1SDV_20141003T040550_20141003T040619_002660_002F64_EC04',
-                    'Satellite': 'Sentinel-1A',
+                        'S1B_IW_GRDH_1SDV_20180813T054020_20180813T054045_012240_0168D6_B775',
+                    'Satellite': 'Sentinel-1B',
                     'Acquisition_Mode': 'Interferometric Wide Swath',
                     'Processing_Level': '1',
                     'Product_Type': 'Ground Range Detected (GRD)',
-                    'Acquisition_Date': '20141003',
-                    'Start_Time': '040550',
-                    'Stop_Time': '040619',
-                    'Absolute_Orbit': '002660',
-                    'Relative_Orbit': '138'
+                    'Acquisition_Date': '20180813',
+                    'Start_Time': '054020',
+                    'Stop_Time': '054045',
+                    'Absolute_Orbit': '012240',
+                    'Relative_Orbit': '139'
                     }
+    control_poly = 'POLYGON ((10.623921 53.968655, 6.593705 54.389683, 6.990701 55.883099, 11.171576 55.458015, 10.623921 53.968655))'
     assert control_dict == s1.info()
     assert s1.scene_id == control_id
+    s1.zip_annotation_get(download_dir=grd_project_class.download_dir)
+    assert control_poly == s1.get_product_polygon(
+
+        download_dir=grd_project_class.download_dir
+    ).wkt
+    s1._get_center_lat(
+        scene_path=s1.get_path(
+            download_dir=grd_project_class.download_dir
+        )
+    )
+    s1 = Sentinel1Scene(s1_mai_2020_id)
+    s1.scihub_annotation_get(
+        uname=HERBERT_USER['uname'],
+        pword=HERBERT_USER['pword']
+    )
+    s1.asf_url()
+    s1.get_ard_parameters(ard_type='OST-GTC')
 
 
 def test_s1scene_slc_processing(s1_slc_ost_master,
@@ -62,3 +82,4 @@ def test_s1scene_grd_processing(s1_grd_notnr_ost_product,
     assert os.path.exists(out_dict['bs'])
     assert out_dict['ls'] is None
     assert os.path.exists(out_tif)
+    s1scene.visualise_rgb()

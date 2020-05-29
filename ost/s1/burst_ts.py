@@ -172,7 +172,7 @@ def timeseries_to_timescan(burst_gdf, config_dict):
     # -------------------------------------
     # 2 create iterable for parallel processing
     for burst in burst_gdf.bid.unique():
-        logger.debug(burst)
+        logger.info(burst)
 
         # get relevant directories
         burst_dir = Path(processing_dir).joinpath(burst)

@@ -45,6 +45,7 @@ def ard_to_ts(
         # get timeseries directory and create if non existent
         out_dir = burst_dir.joinpath('Timeseries')
         extent = burst_dir.joinpath(f'{track}.extent.gpkg')
+        burst = track
 
     Path.mkdir(out_dir, parents=True, exist_ok=True)
     # in case some processing has been done before, check if already processed
@@ -65,10 +66,10 @@ def ard_to_ts(
     to_db = ard['to_db']
     if to_db or product != 'bs':
         to_db = False
-        logger.debug(f'Not converting to dB for {product}')
+        logger.info(f'Not converting to dB for {product}')
     else:
         to_db = ard_mt['to_db']
-        logger.debug(f'Converting to dB for {product}')
+        logger.info(f'Converting to dB for {product}')
     # -------------------------------------------
     # 5 SNAP processing
     with TemporaryDirectory(prefix=f'{temp_dir}/') as temp:
@@ -208,7 +209,7 @@ def ard_to_ts(
                         out_stack.with_suffix('.data').glob(f'*{pol}*{date}*img')
                     )[0]
                     if not os.path.isfile(infile):
-                        logger.debug(
+                        logger.info(
                             '%s ARD does not exist next date in Timeseries', date
                         )
                         continue
@@ -218,7 +219,7 @@ def ard_to_ts(
                     )
                     infile = ''.join([str(e) for e in all_pols if pol in str(e)])
                     if not os.path.isfile(infile):
-                        logger.debug(
+                        logger.info(
                             '%s ARD does not exist next date in Timeseries', date
                         )
                         return None
@@ -247,14 +248,6 @@ def ard_to_ts(
 
                 # add ot a list for subsequent vrt creation
                 outfiles.append(str(outfile))
-
-    # -----------------------------------------------
-    # 7 Filechecks
-    for file in outfiles:
-        return_code = h.check_out_tiff(file)
-        if return_code != 0:
-            Path(file).unlink()
-            return return_code
 
     # write file, so we know this ts has been successfully processed
     with open(str(check_file), 'w') as file:

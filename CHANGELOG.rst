@@ -2,6 +2,28 @@
 Changelog
 #########
 
+-----
+0.9.7
+-----
+* added asf search
+* set asf search as primary search
+* remove get_paths from creo and onda DIAS from Sentinel1Scene class
+* remove peps from s1scene
+* remove onda and peps download fuctions as they are not tested
+* updated SLC routine to current PhiLab version
+* adjusted burst processing to EOX-A release
+* adjusted ard_json for slc to match PhiLab
+* added Coherence test and updateted polarimetric test
+* Animation from time series update
+    * will fix properly in 0.10 along with the new mosaicing etc.
+* Quickfix for GRD VV VH timeseries
+    * will fix properly in 0.10 along with the new mosaicing etc.
+
+-----
+0.9.6
+-----
+* added single geotiff output for GRD processing
+* GRD batch returns updated inventory with processed products
 
 -----
 0.9.5

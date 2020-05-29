@@ -12,6 +12,9 @@ import logging
 import gdal
 import geopandas as gpd
 from shapely.wkt import loads
+from urllib.request import urlopen
+
+from retry import retry
 
 from ost.helpers import vector as vec
 
@@ -100,7 +103,7 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
 
     currtime = time.time()
 
-    logger.debug('Following command will be executed: %s', command)
+    logger.info('Following command will be executed: %s', command)
     if silent:
         dev_null = open(os.devnull, 'w')
         stderr = subprocess.PIPE
@@ -287,3 +290,10 @@ def resolution_in_degree(latitude, meters):
     # Find the radius of a circle around the earth at given latitude.
     r = earth_radius * math.cos(latitude * degrees_to_radians)
     return (meters / r) * radians_to_degrees
+
+
+@retry(tries=5, logger=logger, delay=3, backoff=2)
+def get_response(url, timeout=None):
+    with urlopen(url, timeout=timeout) as src:
+        response = src.read().decode()
+    return response

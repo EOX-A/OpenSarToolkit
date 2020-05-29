@@ -1,7 +1,7 @@
 FROM ubuntu:18.04
 
 LABEL maintainer="Petr Sevcik, EOX"
-LABEL OpenSARToolkit='0.9.6'
+LABEL OpenSARToolkit='0.9.7'
 
 # set work directory to home and download snap
 WORKDIR /home/ost
