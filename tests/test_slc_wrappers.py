@@ -3,8 +3,9 @@ import pytest
 import logging
 from pathlib import Path
 
-from ost.s1.slc_wrappers import burst_import, calibration, ha_alpha
-from ost.s1.burst_to_ard import create_coherence_layers
+from ost.s1.slc_wrappers import burst_import, calibration
+from ost.s1.burst_to_ard import create_coherence_layers, \
+    create_polarimetric_layers
 
 logger = logging.getLogger(__name__)
 
@@ -124,27 +125,29 @@ def test_coherence(s1_slc_ost_master,
         assert os.path.isfile(out_path[0])
 
 
-@pytest.mark.skip(reason="Takes too long skip for now!")
+# @pytest.mark.skip(reason="Takes too long skip for now!")
 def test_burst_ha_alpha(
         s1_slc_master,
         s1_slc_ost_master,
         slc_project_class,
 ):
-    scene_id, master = s1_slc_ost_master
+    slc_project_class.ard_parameters.update(
+        resolution=60
+    )
+    slc_project_class.update_ard_parameters()
+    master_id, master = s1_slc_ost_master
     for idx, burst in slc_project_class.burst_inventory.iterrows():
         if idx > 2:
             continue
-        return_code = ha_alpha(
-            infile=s1_slc_master,
-            outfile=os.path.join(
-                slc_project_class.processing_dir, scene_id+'_ha_alpha'
-            ),
-            logfile=logger,
-            # pol_speckle_filter=slc_project_class.ard_parameters
-            # ['single ARD']['remove pol speckle'],
-            pol_speckle_filter=False,
-            pol_speckle_dict=slc_project_class.ard_parameters
-            ['single ARD']['pol speckle filter'],
-            gpt_max_workers=os.cpu_count()
-        )
-        assert return_code == 0
+        out_path = create_polarimetric_layers(
+            import_file=Path(os.path.join(
+                slc_project_class.temp_dir,
+                master_id+'_'+burst.bid+'_import.dim'
+            )),
+            out_dir=Path(os.path.join(
+                slc_project_class.temp_dir,
+            )),
+            burst_prefix=master_id,
+            config_dict=slc_project_class.config_dict
+            )
+        assert os.path.isfile(out_path[0])
