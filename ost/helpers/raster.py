@@ -519,11 +519,11 @@ def create_timeseries_animation(
     # Iterate over the tifs from the timeseries
     for i in range(nr_of_products):
         filelist = [glob.glob(
-            opj(track_ts_folder, '{}.*{}*tif'.format(i + 1, product))
+            opj(track_ts_folder, '{}*{}*tif'.format(str('%02d' % i + 1), product))
         )[0]
                     for product in product_list
                     ]
-        dates = os.path.basename(filelist[0]).split('.')[1]
+        dates = str(os.path.basename(filelist[0])).split('_')[1]
         if add_dates:
             date = dates
         else:
@@ -531,12 +531,12 @@ def create_timeseries_animation(
 
         create_rgb_jpeg(
             filelist,
-            opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)),
+            opj(out_folder, '{}_{}.jpeg'.format(i+1, dates)),
             shrink_factor,
             date=date
         )
-        outfiles.append(opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)))
-    out_gif_name = track_ts_folder.split('/')[-2]+'_ts_animation.gif'
+        outfiles.append(opj(out_folder, '{}_{}.jpeg'.format(i+1, dates)))
+    out_gif_name = str(track_ts_folder).split('/')[-2]+'_ts_animation.gif'
     # create gif
     with imageio.get_writer(
             opj(out_folder, out_gif_name),

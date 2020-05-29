@@ -628,17 +628,6 @@ class Sentinel1Batch(Sentinel1):
         with open(self.config_file, 'w+') as out:
             json.dump(self.config_dict, out, indent=4)
 
-        # 5 Add variables that migh be used in the future here
-        self.timeseries_dirs = [
-            Path.joinpath(self.processing_dir, track, 'Timeseries')
-            for track in self.inventory.relativeorbit.unique()
-        ]
-        self.timescan_dirs = [
-            Path.joinpath(self.processing_dir, track, 'Timescan')
-            for track in self.inventory.relativeorbit.unique()
-        ]
-        self.animations_dir = Path.joinpath(self.processing_dir, 'Animations')
-
     # ---------------------------------------
     # methods
     def get_ard_parameters(self):
@@ -723,6 +712,10 @@ class Sentinel1Batch(Sentinel1):
 
         # time-series part
         if timeseries or timescan:
+            self.timeseries_dirs = [
+                Path.joinpath(self.processing_dir, track, 'Timeseries')
+                for track in self.inventory.relativeorbit.unique()
+            ]
             # check and retry function
             grd_batch.ards_to_timeseries(self.inventory,
                                          self.processing_dir,
@@ -731,6 +724,10 @@ class Sentinel1Batch(Sentinel1):
                                          )
 
         if timescan:
+            self.timescan_dirs = [
+                Path.joinpath(self.processing_dir, track, 'Timescan')
+                for track in self.inventory.relativeorbit.unique()
+            ]
             # number of expected timescans
             grd_batch.timeseries_to_timescan(
                 self.inventory,
@@ -846,10 +843,11 @@ class Sentinel1Batch(Sentinel1):
                                      duration=1,
                                      add_dates=False
                                      ):
+        self.animations_dir = Path.joinpath(self.processing_dir, 'Animations')
         for ts_dir in self.timeseries_dirs:
             ras.create_timeseries_animation(
                 track_ts_folder=ts_dir,
-                product_list=['bs_VV', 'bs_VH'],
+                product_list=['BS', 'BS'],
                 out_folder=self.animations_dir,
                 shrink_factor=shrink_factor,
                 duration=duration,
