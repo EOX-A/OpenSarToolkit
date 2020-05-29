@@ -14,8 +14,6 @@ Changelog
 * adjusted burst processing to EOX-A release
 * adjusted ard_json for slc to match PhiLab
 * added Coherence test and updateted polarimetric test
-* Multitemporal, Timeseries and Timestack generation broken
-    * target fix in the version 0.10
 
 -----
 0.9.6
