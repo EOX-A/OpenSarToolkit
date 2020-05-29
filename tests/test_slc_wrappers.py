@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_burst_import(s1_slc_master,
+                      s1_slc_slave,
                       s1_slc_ost_slave,
                       s1_slc_ost_master,
                       slc_project_class
@@ -33,21 +34,18 @@ def test_burst_import(s1_slc_master,
         assert os.path.isfile(out_path)
 
     scene_id, master = s1_slc_ost_slave
-    for idx, burst in slc_project_class.burst_inventory.iterrows():
-        if idx > 2 or burst.SwathID != 'IW1':
-            continue
-        out_path = burst_import(
-            infile=Path(s1_slc_ost_slave),
-            outfile=Path(os.path.join(
-                slc_project_class.temp_dir,
-                scene_id+'_'+burst.bid+'_import'
-            )),
-            logfile=logger,
-            swath=burst.SwathID,
-            burst=burst.BurstNr,
-            config_dict=slc_project_class.config_dict
-        )
-        assert os.path.isfile(out_path)
+    out_path = burst_import(
+        infile=Path(s1_slc_slave),
+        outfile=Path(os.path.join(
+            slc_project_class.temp_dir,
+            scene_id+'_'+'A15_IW1_7542'+'_import'
+        )),
+        logfile=logger,
+        swath="IW1",
+        burst=3,
+        config_dict=slc_project_class.config_dict
+    )
+    assert os.path.isfile(out_path)
 
 
 def test_burst_calibration(s1_slc_ost_master,
@@ -115,7 +113,7 @@ def test_coherence(s1_slc_ost_master,
             )),
             slave_import=Path(os.path.join(
                 slc_project_class.temp_dir,
-                slave_id+'_'+burst.bid+'_import.dim'
+                slave_id+'_'+'A15_IW1_7542'+'_import.dim'
             )),
             out_dir=Path(os.path.join(
                 slc_project_class.temp_dir,
