@@ -1,6 +1,5 @@
 import os
 import json
-from datetime import timedelta
 
 import logging
 import rasterio
@@ -629,6 +628,17 @@ class Sentinel1Batch(Sentinel1):
         with open(self.config_file, 'w+') as out:
             json.dump(self.config_dict, out, indent=4)
 
+        # 5 Add variables that migh be used in the future here
+        self.timeseries_dirs = [
+            Path.joinpath(self.processing_dir, track, 'Timeseries')
+            for track in self.inventory.relativeorbit.unique()
+        ]
+        self.timescan_dirs = [
+            Path.joinpath(self.processing_dir, track, 'Timescan')
+            for track in self.inventory.relativeorbit.unique()
+        ]
+        self.animations_dir = opj(self.processing_dir, 'Animations')
+
     # ---------------------------------------
     # methods
     def get_ard_parameters(self):
@@ -831,23 +841,17 @@ class Sentinel1Batch(Sentinel1):
                 self.config_file,
             )
 
-    def create_timeseries_animation(
-            self,
-            timeseries_dir,
-            product_list,
-            outfile,
-            shrink_factor=1,
-            resampling_factor=5,
-            duration=1,
-            add_dates=False,
-            prefix=False
-    ):
-        ras.create_timeseries_animation(timeseries_dir,
-                                        product_list,
-                                        outfile,
-                                        shrink_factor=shrink_factor,
-                                        duration=duration,
-                                        resampling_factor=resampling_factor,
-                                        add_dates=add_dates,
-                                        prefix=prefix
-                                        )
+    def create_timeseries_animations(self,
+                                     shrink_factor=5,
+                                     duration=1,
+                                     add_dates=False
+                                     ):
+        for ts_dir in self.timeseries_dirs:
+            ras.create_timeseries_animation(
+                track_ts_folder=ts_dir,
+                product_list=['bs_VV', 'bs_VH'],
+                out_folder=self.animations_dir,
+                shrink_factor=shrink_factor,
+                duration=duration,
+                add_dates=add_dates
+            )

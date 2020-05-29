@@ -455,51 +455,6 @@ def create_rgb_jpeg(filelist, outfile=None, shrink_factor=1, resampling_factor=5
     if plot:
         plt.imshow(arr)
 
-    
-def create_timeseries_animation(timeseries_folder, product_list, out_folder,
-                                shrink_factor=1, resampling_factor=5, duration=1, add_dates=False, prefix=False):
-
-    
-    nr_of_products = len(glob.glob(
-        opj(timeseries_folder, '*{}.tif'.format(product_list[0]))))
-    outfiles = []
-    # for coherence it must be one less
-    if 'coh.VV' in product_list or 'coh.VH' in product_list:
-        nr_of_products == nr_of_products - 1
-        
-    for i in range(nr_of_products):
-
-        filelist = [glob.glob(opj(timeseries_folder, '{}.*{}*tif'.format(i + 1, product)))[0] for product in product_list]
-        dates = os.path.basename(filelist[0]).split('.')[1]    
-        
-        if add_dates:
-            date = dates
-        else:
-            date = None
-        
-        create_rgb_jpeg(filelist, 
-                        opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)),
-                        shrink_factor,
-                        resampling_factor,
-                        date=date)
-
-        outfiles.append(opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)))
-
-    # create gif
-    if prefix:
-        gif_name = '{}_{}_ts_animation.gif'.format(prefix,product_list[0])
-    else:
-        gif_name = '{}_ts_animation.gif'.format(product_list[0])
-    with imageio.get_writer(opj(out_folder, gif_name), mode='I',
-        duration=duration) as writer:
-
-        for file in outfiles:
-            image = imageio.imread(file)
-            writer.append_data(image)
-            os.remove(file)
-            if os.path.isfile(file + '.aux.xml'):
-                os.remove(file + '.aux.xml')
-
 
 def np_binary_erosion(
         input_array,
@@ -543,3 +498,54 @@ def np_binary_erosion(
             binary_erosion[row+1, col+1] = np.min(
                 input_pad_array[row:row+3, col:col+3][struc_mask])
     return binary_erosion[1:rows+1, 1:cols+1]
+
+
+def create_timeseries_animation(
+        track_ts_folder,
+        product_list,
+        out_folder,
+        shrink_factor=1,
+        duration=1,
+        add_dates=False
+):
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder, exist_ok=True)
+    nr_of_products = len(glob.glob(
+        opj(track_ts_folder, '*{}.tif'.format(product_list[0]))))
+    outfiles = []
+    # for coherence it must be one less
+    if 'coh.VV' in product_list or 'coh.VH' in product_list:
+        nr_of_products = nr_of_products - 1
+    # Iterate over the tifs from the timeseries
+    for i in range(nr_of_products):
+        filelist = [glob.glob(
+            opj(track_ts_folder, '{}.*{}*tif'.format(i + 1, product))
+        )[0]
+                    for product in product_list
+                    ]
+        dates = os.path.basename(filelist[0]).split('.')[1]
+        if add_dates:
+            date = dates
+        else:
+            date = None
+
+        create_rgb_jpeg(
+            filelist,
+            opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)),
+            shrink_factor,
+            date=date
+        )
+        outfiles.append(opj(out_folder, '{}.{}.jpeg'.format(i+1, dates)))
+    out_gif_name = track_ts_folder.split('/')[-2]+'_ts_animation.gif'
+    # create gif
+    with imageio.get_writer(
+            opj(out_folder, out_gif_name),
+            mode='I',
+            duration=duration
+    ) as writer:
+        for file in outfiles:
+            image = imageio.imread(file)
+            writer.append_data(image)
+            os.remove(file)
+            if os.path.isfile(file + '.aux.xml'):
+                os.remove(file + '.aux.xml')

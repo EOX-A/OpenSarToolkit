@@ -45,6 +45,7 @@ def ard_to_ts(
         # get timeseries directory and create if non existent
         out_dir = burst_dir.joinpath('Timeseries')
         extent = burst_dir.joinpath(f'{track}.extent.gpkg')
+        burst = track
 
     Path.mkdir(out_dir, parents=True, exist_ok=True)
     # in case some processing has been done before, check if already processed
