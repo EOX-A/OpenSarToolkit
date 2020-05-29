@@ -35,7 +35,7 @@ class Generic:
             processing_dir=None,
             temp_dir=None,
             data_mount=None,
-            log_level=logging.INFO
+            log_level=logging.DEBUG
     ):
 
         # ------------------------------------------
@@ -169,7 +169,7 @@ class Sentinel1(Generic):
                  polarisation='*',
                  username=None,
                  password=None,
-                 log_level=logging.INFO
+                 log_level=logging.DEBUG
                  ):
 
         # ------------------------------------------
@@ -557,7 +557,7 @@ class Sentinel1Batch(Sentinel1):
                  ard_type='OST-GTC',
                  username=None,
                  password=None,
-                 log_level=logging.INFO
+                 log_level=logging.DEBUG
                  ):
         # ------------------------------------------
         # 1 Initialize super class

@@ -49,7 +49,7 @@ def burst_import(
     # get path to graph
     graph = OST_ROOT.joinpath('graphs/S1_SLC2ARD/S1_SLC_BurstSplit_AO.xml')
 
-    logger.debug(
+    logger.info(
         f'Importing Burst {burst} from Swath {swath} from scene {infile.name}'
     )
 
@@ -62,11 +62,11 @@ def burst_import(
         f'-Poutput={str(outfile)}'
     )
 
-    logger.debug(f'Executing command: {command}')
+    logger.info(f'Executing command: {command}')
     return_code = h.run_command(command, logfile)
 
     if return_code == 0:
-        logger.debug('Succesfully imported burst.')
+        logger.info('Succesfully imported burst.')
     else:
         raise GPTRuntimeError(
             f'Frame import exited with error {return_code}. '
@@ -106,7 +106,7 @@ def ha_alpha(infile, outfile, logfile, config_dict):
         graph = OST_ROOT.joinpath(
             'graphs/S1_SLC2ARD/S1_SLC_Deb_Spk_Halpha.xml'
         )
-        logger.debug(
+        logger.info(
             'Applying the polarimetric speckle filter and'
             ' calculating the H-alpha dual-pol decomposition'
         )
@@ -128,18 +128,18 @@ def ha_alpha(infile, outfile, logfile, config_dict):
             'graphs/S1_SLC2ARD/S1_SLC_Deb_Halpha.xml'
         )
 
-        logger.debug('Calculating the H-alpha dual polarisation')
+        logger.info('Calculating the H-alpha dual polarisation')
         command = (
             f'{GPT_FILE} {graph} -x -q {2 * cpus} '
             f'-Pinput="{str(infile)}" '
             f'-Poutput="{str(outfile)}"'
         )
 
-    logger.debug(f'Executing command: {command}')
+    logger.info(f'Executing command: {command}')
     return_code = h.run_command(command, logfile)
 
     if return_code == 0:
-        logger.debug('Succesfully created H/A/Alpha product')
+        logger.info('Succesfully created H/A/Alpha product')
     else:
         raise GPTRuntimeError(
             f'H/Alpha exited with an error {return_code}. '
@@ -191,7 +191,7 @@ def calibration(
 
     # construct command dependent on selected product type
     if ard['product_type'] == 'RTC-gamma0':
-        logger.debug('Calibrating the product to a RTC product.')
+        logger.info('Calibrating the product to a RTC product.')
 
         # get graph for RTC generation
         graph = OST_ROOT.joinpath(
@@ -213,7 +213,7 @@ def calibration(
         )
 
     elif ard['product_type'] == 'GTC-gamma0':
-        logger.debug('Calibrating the product to a GTC product (Gamma0).')
+        logger.info('Calibrating the product to a GTC product (Gamma0).')
 
         # get graph for GTC-gammao0 generation
         graph = OST_ROOT.joinpath(
@@ -231,7 +231,7 @@ def calibration(
         )
 
     elif ard['product_type'] == 'GTC-sigma0':
-        logger.debug('Calibrating the product to a GTC product (Sigma0).')
+        logger.info('Calibrating the product to a GTC product (Sigma0).')
 
         # get graph for GTC-sigma0 generation
         graph = OST_ROOT.joinpath(
@@ -250,11 +250,11 @@ def calibration(
     else:
         raise TypeError('Wrong product type selected.')
 
-    logger.debug(f'Command: {command}')
+    logger.info(f'Command: {command}')
     return_code = h.run_command(command, logfile)
 
     if return_code == 0:
-        logger.debug('Succesfully calibrated product')
+        logger.info('Succesfully calibrated product')
     else:
         raise GPTRuntimeError(
             f'Calibration exited with an error {return_code}. '
@@ -290,7 +290,7 @@ def coreg(master, slave, outfile, logfile, config_dict):
     cpus = config_dict['gpt_max_workers']
     dem_dict = config_dict['processing']['single_ARD']['dem']
 
-    logger.debug(f'Co-registering {master} and {slave}')
+    logger.info(f'Co-registering {master} and {slave}')
 
     # construct command
     command = (
@@ -304,11 +304,11 @@ def coreg(master, slave, outfile, logfile, config_dict):
         f' "{master}" "{slave}"'
     )
 
-    logger.debug(f'Executing command: {command}')
+    logger.info(f'Executing command: {command}')
     return_code = h.run_command(command, logfile)
 
     if return_code == 0:
-        logger.debug('Succesfully coregistered product.')
+        logger.info('Succesfully coregistered product.')
     else:
         raise GPTRuntimeError(
             f'Co-registration exited with an error {return_code}. '
@@ -347,7 +347,7 @@ def coreg2(master, slave, outfile, logfile, config_dict):
     # get path to graph
     graph = OST_ROOT.joinpath('graphs/S1_SLC2ARD/S1_SLC_Coreg.xml')
 
-    logger.debug(f'Co-registering {master} and {slave}')
+    logger.info(f'Co-registering {master} and {slave}')
     command = (
         f"{GPT_FILE} {graph} -x -q {2*cpus} "
         f" -Pmaster={master} "
@@ -362,7 +362,7 @@ def coreg2(master, slave, outfile, logfile, config_dict):
     return_code = h.run_command(command, logfile)
 
     if return_code == 0:
-        logger.debug('Successfully co-registered product.')
+        logger.info('Successfully co-registered product.')
     else:
         raise GPTRuntimeError(
             f'Co-registration exited with an error {return_code}. '
@@ -399,7 +399,7 @@ def coherence(infile, outfile, logfile, config_dict):
     # get path to graph
     graph = OST_ROOT.joinpath('graphs/S1_SLC2ARD/S1_SLC_Coh_Deb.xml')
 
-    logger.debug('Coherence estimation')
+    logger.info('Coherence estimation')
 
     command = (
         f"{GPT_FILE} {graph} -x -q {2 * cpus} "
@@ -410,11 +410,11 @@ def coherence(infile, outfile, logfile, config_dict):
         f'-Poutput="{str(outfile)}"'
     )
 
-    logger.debug(f'Executing command: {command}')
+    logger.info(f'Executing command: {command}')
     return_code = h.run_command(command, logfile)
 
     if return_code == 0:
-        logger.debug('Succesfully created coherence product.')
+        logger.info('Succesfully created coherence product.')
     else:
         raise GPTRuntimeError(
             f'Coherence exited with an error {return_code}. '

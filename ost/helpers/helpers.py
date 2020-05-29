@@ -103,7 +103,7 @@ def run_command(command, logfile=None, elapsed=True, silent=True):
 
     currtime = time.time()
 
-    logger.debug('Following command will be executed: %s', command)
+    logger.info('Following command will be executed: %s', command)
     if silent:
         dev_null = open(os.devnull, 'w')
         stderr = subprocess.PIPE

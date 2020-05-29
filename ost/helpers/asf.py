@@ -88,14 +88,14 @@ def s1_download(argument_list):
     )
     urlreq.install_opener(opener)
 
-    logger.debug('INFO: Downloading scene to: {}'.format(filename))
+    logger.info('INFO: Downloading scene to: {}'.format(filename))
     # submit the request using the session
     try:
         response = urlreq.urlopen(url=url)
         # raise an exception in case of http errors
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            logger.debug(
+            logger.info(
                 'Product %s missing from the archive, continuing.',
                 filename.split('/')[-1]
             )

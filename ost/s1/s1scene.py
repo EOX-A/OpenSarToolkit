@@ -657,7 +657,7 @@ class Sentinel1Scene:
             except Exception as e:
                 raise e
         if float(self.center_lat) > 59 or float(self.center_lat) < -59:
-            logger.debug(
+            logger.info(
                 'INFO: Scene is outside SRTM coverage. Will use 30m ASTER'
                 ' DEM instead.'
             )
@@ -746,7 +746,7 @@ class Sentinel1Scene:
     def create_rgb(self, outfile, process_bounds=None, driver='GTiff'):
         # invert ot db from create_ard workflow for rgb creation
         # (otherwise we do it double)
-        logger.debug('Creating RGB Geotiff for scene: %s', self.scene_id)
+        logger.info('Creating RGB Geotiff for scene: %s', self.scene_id)
         if self.ard_parameters['single_ARD']['to_db']:
             to_db = False
         else:
@@ -764,7 +764,7 @@ class Sentinel1Scene:
             bs_list = self.ard_dimap['bs']
             ard_slc_to_rgb(bs_list, outfile, process_bounds, driver, to_db)
         self.ard_rgb = outfile
-        logger.debug('RGB Geotiff done for scene: %s', self.scene_id)
+        logger.info('RGB Geotiff done for scene: %s', self.scene_id)
         return outfile
 
     def create_rgb_thumbnail(self, outfile, driver='JPEG', shrink_factor=25):

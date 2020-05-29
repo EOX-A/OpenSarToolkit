@@ -48,7 +48,7 @@ def execute_burst_to_tif(dim_file, out_path, driver='GTiff', to_db=False):
                            )
         with rasterio.open(out_tif, 'w', **out_profile) as dst:
             if co.shape != cr.shape:
-                logger.debug('dimensions do not match')
+                logger.info('dimensions do not match')
             # read arrays and turn to dB (in case it isn't)
             co_array = co.read(
                 resampling=Resampling.cubic_spline
@@ -193,7 +193,7 @@ def ard_to_rgb(
     with rasterio.open(co_pol) as co,  rasterio.open(cross_pol) as cr:
         # !assure that dimensions match ####
         if co.shape != cr.shape:
-            logger.debug('dimensions do not match')
+            logger.info('dimensions do not match')
         # get meta data
         meta = co.meta
         # update meta
@@ -312,7 +312,7 @@ def ard_to_thumbnail(
         meta.update(height=new_height, width=new_width)
 
         if co.shape != cr.shape:
-            logger.debug('dimensions do not match')
+            logger.info('dimensions do not match')
 
         # read arrays and turn to dB
 

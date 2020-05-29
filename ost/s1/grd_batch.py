@@ -100,7 +100,7 @@ def _execute_grd_batch(
         elif not acq_poly.intersects(sub_poly):
             for i, row in inventory_df.iterrows():
                 if row.identifier == Sentinel1Scene(scene).scene_id:
-                    logger.debug(
+                    logger.info(
                         'Scene does not intersect the subset %s',
                         Sentinel1Scene(scene).scene_id
                     )
@@ -329,7 +329,7 @@ def ards_to_timeseries(
                     counter += 1
 
             if counter == len(list_of_layover):
-                logger.debug('No layerover masks found skipping!')
+                logger.info('No layerover masks found skipping!')
             else:
                 # layover/shadow mask
                 out_ls = opj(track_dir, '{}.ls_mask.tif'.format(track))
