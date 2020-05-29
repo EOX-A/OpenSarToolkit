@@ -27,7 +27,7 @@ def some_bounds_slc():
 
 @pytest.fixture
 def s1_id():
-    return 'S1A_IW_GRDH_1SDV_20141003T040550_20141003T040619_002660_002F64_EC04'
+    return 'S1B_IW_GRDH_1SDV_20180813T054020_20180813T054045_012240_0168D6_B775'
 
 
 @pytest.fixture

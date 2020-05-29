@@ -592,9 +592,9 @@ class Sentinel1Scene:
     def set_external_dem(self, dem_file):
         # check if file exists
         if not os.path.isfile(dem_file):
-            print(' ERROR: No dem file found at location {}.'.format(dem_file))
-            return
-
+            raise FileNotFoundError(
+                'No dem file found at location {}.'.format(dem_file)
+            )
         # get no data value
         with rasterio.open(dem_file) as file:
             dem_nodata = file.nodata
