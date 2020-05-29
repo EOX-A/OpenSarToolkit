@@ -1,6 +1,7 @@
 import os
 from os.path import join as opj
 import numpy as np
+import pandas as pd
 import json
 import glob
 import itertools
@@ -318,28 +319,30 @@ def ards_to_timeseries(
                             )
 
     if ard['create_ls_mask']:
-        for track in inventory_df.relativeorbit.unique():
+        logger.warning('create_ls_mask at timeseries level still not working')
 
-            # get the burst directory
-            track_dir = opj(processing_dir, track)
-            list_of_layover = inventory_df['out_ls_mask'].to_list()
-            counter = 0
-            for e in list_of_layover:
-                if np.isnan(e):
-                    counter += 1
-
-            if counter == len(list_of_layover):
-                logger.info('No layerover masks found skipping!')
-            else:
-                # layover/shadow mask
-                out_ls = opj(track_dir, '{}.ls_mask.tif'.format(track))
-
-                logger.info('Creating common Layover/Shadow mask for track {}'.format(track))
-                ts_ls_mask.mt_layover(filelist=list_of_layover,
-                                      outfile=out_ls,
-                                      temp_dir=temp_dir,
-                                      extent=extent,
-                                      )
+        # for track in inventory_df.relativeorbit.unique():
+        #
+        #     # get the burst directory
+        #     track_dir = opj(processing_dir, track)
+        #     list_of_layover = inventory_df['out_ls_mask'].to_list()
+        #     counter = 0
+        #     for e in list_of_layover:
+        #         if pd.isnull(e):
+        #             counter += 1
+        #
+        #     if counter == len(list_of_layover):
+        #         logger.info('No layerover masks found skipping!')
+        #     else:
+        #         # layover/shadow mask
+        #         out_ls = opj(track_dir, '{}.ls_mask.tif'.format(track))
+        #
+        #         logger.info('Creating common Layover/Shadow mask for track {}'.format(track))
+        #         ts_ls_mask.mt_layover(filelist=list_of_layover,
+        #                               outfile=out_ls,
+        #                               temp_dir=temp_dir,
+        #                               extent=extent,
+        #                               )
 
     for track in inventory_df.relativeorbit.unique():
         # get the burst directory

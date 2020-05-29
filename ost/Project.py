@@ -833,7 +833,8 @@ class Sentinel1Batch(Sentinel1):
 
     def create_timeseries_animation(
             self,
-            timeseries_dir, product_list,
+            timeseries_dir,
+            product_list,
             outfile,
             shrink_factor=1,
             resampling_factor=5,
