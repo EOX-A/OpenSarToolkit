@@ -249,14 +249,6 @@ def ard_to_ts(
                 # add ot a list for subsequent vrt creation
                 outfiles.append(str(outfile))
 
-    # -----------------------------------------------
-    # 7 Filechecks
-    for file in outfiles:
-        return_code = h.check_out_tiff(file)
-        if return_code != 0:
-            Path(file).unlink()
-            return return_code
-
     # write file, so we know this ts has been successfully processed
     with open(str(check_file), 'w') as file:
         file.write('passed all tests \n')
