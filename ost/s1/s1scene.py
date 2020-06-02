@@ -686,7 +686,7 @@ class Sentinel1Scene:
                 out_files_dict['ls'] = out_ls
                 # write to class attribute
                 self.ard_dimap = out_files_dict
-                if not os.path.isfile(str(self.ard_dimap['bs'])):
+                if not os.path.isfile(str(self.ard_dimap['BS'])):
                     raise RuntimeError
 
         elif self.product_type == 'SLC':
