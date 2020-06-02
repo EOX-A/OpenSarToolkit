@@ -529,7 +529,7 @@ def burst_to_ard(burst, config_dict):
 
         if ard['backscatter'] and bs_file:
             out_bs = str(
-                out_dir.joinpath(f'{master_prefix}_bs').with_suffix('.dim')
+                out_dir.joinpath(f'{master_prefix}_BS').with_suffix('.dim')
             )
 
         if ard['create_ls_mask'] and bs_file:

@@ -59,7 +59,7 @@ def test_s1scene_slc_processing(s1_slc_ost_master,
     out_tif = s1scene.create_rgb(
         outfile=os.path.join(str(slc_project_class.project_dir), s1scene.scene_id+'.tif')
     )
-    assert os.path.exists(out_files_dict['bs'][0][1])
+    assert os.path.exists(out_files_dict['BS'][0][1])
     assert os.path.exists(out_files_dict['ls'][0])
     assert os.path.exists(out_tif)
 
@@ -78,8 +78,8 @@ def test_s1scene_grd_processing(s1_grd_notnr_ost_product,
         overwrite=True,
         subset=aoi
         )
-    out_tif = s1scene.create_rgb(outfile=out_dict['bs'].replace('.dim', '.tif'))
-    assert os.path.exists(out_dict['bs'])
+    out_tif = s1scene.create_rgb(outfile=out_dict['BS'].replace('.dim', '.tif'))
+    assert os.path.exists(out_dict['BS'])
     assert out_dict['ls'] is None
     assert os.path.exists(out_tif)
     s1scene.visualise_rgb()

@@ -361,7 +361,7 @@ def ards_to_timeseries(
                 continue
             ard_to_ts.ard_to_ts(
                 list_of_files=list_of_dims,
-                product='BS'.lower(),
+                product='BS',
                 pol=pol,
                 config_dict=config_dict,
                 track=track
