@@ -753,7 +753,7 @@ class Sentinel1Scene:
             to_db = True
         if self.product_type == 'GRD':
             self.processing_poly = None
-            ard_to_rgb(infile=self.ard_dimap['bs'],
+            ard_to_rgb(infile=self.ard_dimap['BS'],
                        outfiles=[outfile, None],
                        driver=driver,
                        to_db=to_db
