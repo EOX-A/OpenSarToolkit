@@ -337,8 +337,8 @@ def grd_to_ard(filelist,
 
     # ---------------------------------------------------------------------
     # 9 Geocoding
-    geocoded = opj(temp_dir, '{}_bs'.format(file_id))
-    logfile = opj(output_dir, '{}_bs.errLog'.format(file_id))
+    geocoded = opj(temp_dir, '{}_BS'.format(file_id))
+    logfile = opj(output_dir, '{}_BS_errLog'.format(file_id))
     return_code = common.terrain_correction(
         infile=infile,
         outfile=geocoded,

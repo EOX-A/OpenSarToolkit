@@ -404,7 +404,7 @@ def timeseries_to_timescan(
             # get timeseries vrt
             timeseries = opj(track_dir,
                              'Timeseries',
-                             'Timeseries_bs_{}.vrt'.format(polar)
+                             'Timeseries_BS_{}.vrt'.format(polar)
             )
 
             if not os.path.isfile(timeseries):
@@ -413,7 +413,7 @@ def timeseries_to_timescan(
             logger.info('Processing Timescans of {} for track {}.'.format(polar, track))
             # create a datelist for harmonics
             scenelist = glob.glob(
-                opj(track_dir, '*bs.{}.tif'.format(polar))
+                opj(track_dir, '*BS_{}.tif'.format(polar))
             )
 
             # create a datelist for harmonics calculation
@@ -422,7 +422,7 @@ def timeseries_to_timescan(
                 datelist.append(os.path.basename(file).split('.')[1])
 
             # define timescan prefix
-            timescan_prefix = opj(timescan_dir, 'bs.{}'.format(polar))
+            timescan_prefix = opj(timescan_dir, 'BS_{}'.format(polar))
 
             # run timescan
             timescan.mt_metrics(
@@ -482,9 +482,9 @@ def mosaic_timeseries(
                 break
 
             if start == end:
-                outfile = opj(ts_dir, '{}_{}_bs_{}.tif'.format(i, start, p))
+                outfile = opj(ts_dir, '{}_{}_BS_{}.tif'.format(i, start, p))
             else:
-                outfile = opj(ts_dir, '{}.{}-{}_bs_{}.tif'.format(i, start, end, p))
+                outfile = opj(ts_dir, '{}.{}-{}_BS_{}.tif'.format(i, start, end, p))
 
             check_file = opj(
                 os.path.dirname(outfile),
@@ -537,7 +537,7 @@ def mosaic_timescan(inventory_df, processing_dir, temp_dir, proc_file,
 
         # create a list of files based on polarisation and metric
         filelist = glob.glob(opj(processing_dir, '*', 'Timescan',
-                                 '*bs.{}.{}.tif'.format(polar, metric)
+                                 '*BS_{}.{}.tif'.format(polar, metric)
                             )
                    )
 
@@ -547,7 +547,7 @@ def mosaic_timescan(inventory_df, processing_dir, temp_dir, proc_file,
 
         # get number
         filelist = ' '.join(filelist)
-        outfile = opj(tscan_dir, 'bs.{}.{}.tif'.format(polar, metric))
+        outfile = opj(tscan_dir, 'BS_{}.{}.tif'.format(polar, metric))
         check_file = opj(
                 os.path.dirname(outfile),
                 '.{}.processed'.format(os.path.basename(outfile)[:-4])

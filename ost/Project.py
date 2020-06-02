@@ -851,7 +851,7 @@ class Sentinel1Batch(Sentinel1):
         for ts_dir in self.timeseries_dirs:
             ras.create_timeseries_animation(
                 track_ts_folder=ts_dir,
-                product_list=['bs_VV', 'bs_VH'],
+                product_list=['BS_VV', 'BS_VH'],
                 out_folder=self.animations_dir,
                 shrink_factor=shrink_factor,
                 duration=duration,

@@ -64,7 +64,7 @@ def ard_to_ts(
     # 4 adjust processing parameters according to config
     # get the db scaling right
     to_db = ard['to_db']
-    if to_db or product != 'bs':
+    if to_db or product != 'BS':
         to_db = False
         logger.info(f'Not converting to dB for {product}')
     else:
@@ -125,7 +125,7 @@ def ard_to_ts(
         # 6 Conversion to GeoTiff
 
         # min max dict for stretching in case of 16 or 8 bit datatype
-        mm_dict = {'bs': {'min': -30, 'max': 5},
+        mm_dict = {'BS': {'min': -30, 'max': 5},
                    'coh': {'min': 0.000001, 'max': 1},
                    'Alpha': {'min': 0.000001, 'max': 90},
                    'Anisotropy': {'min': 0.000001, 'max': 1},

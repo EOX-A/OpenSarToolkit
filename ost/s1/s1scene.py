@@ -637,9 +637,9 @@ class Sentinel1Scene:
 
         self.ard_dimap = None
         if self.product_type == 'SLC':
-            out_files_dict = {'bs': [], 'ls': [], 'coh': [], 'pol': []}
+            out_files_dict = {'BS': [], 'ls': [], 'coh': [], 'pol': []}
         elif self.product_type == 'GRD':
-            out_files_dict = {'bs': '', 'ls': ''}
+            out_files_dict = {'BS': '', 'ls': ''}
         else:
             raise TypeError('Only GRD or SLC S1 product types are supported!!')
 
@@ -682,7 +682,7 @@ class Sentinel1Scene:
                     subset=subset,
                     gpt_max_workers=os.cpu_count()
                     )
-                out_files_dict['bs'] = out_bs
+                out_files_dict['BS'] = out_bs
                 out_files_dict['ls'] = out_ls
                 # write to class attribute
                 self.ard_dimap = out_files_dict
@@ -761,7 +761,7 @@ class Sentinel1Scene:
         elif self.product_type == 'SLC':
             if process_bounds is None:
                 process_bounds = self.processing_poly.bounds
-            bs_list = self.ard_dimap['bs']
+            bs_list = self.ard_dimap['BS']
             ard_slc_to_rgb(bs_list, outfile, process_bounds, driver, to_db)
         self.ard_rgb = outfile
         logger.info('RGB Geotiff done for scene: %s', self.scene_id)

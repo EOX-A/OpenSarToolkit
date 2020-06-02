@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------
 # Global variable
 PRODUCT_LIST = [
-    'bs_HH', 'bs_VV', 'bs_HV', 'bs_VH',
+    'BS_HH', 'BS_VV', 'BS_HV', 'BS_VH',
     'coh_VV', 'coh_VH', 'coh_HH', 'coh_HV',
     'pol_Entropy', 'pol_Anisotropy', 'pol_Alpha'
 ]
@@ -84,7 +84,7 @@ def _create_mt_ls_mask(burst_gdf, config_dict):
 def _create_timeseries(burst_gdf, config_dict):
 
     # we need a
-    dict_of_product_types = {'bs': 'Gamma0', 'coh': 'coh', 'pol': 'pol'}
+    dict_of_product_types = {'BS': 'Gamma0', 'coh': 'coh', 'pol': 'pol'}
     pols = ['VV', 'VH', 'HH', 'HV', 'Alpha', 'Entropy', 'Anisotropy']
 
     processing_dir = config_dict['processing_dir']
@@ -206,7 +206,7 @@ def timeseries_to_timescan(burst_gdf, config_dict):
             timescan_prefix = timescan_dir.joinpath(product)
 
             # get rescaling and db right (backscatter vs. coh/pol)
-            if 'bs.' in str(timescan_prefix):
+            if 'BS_' in str(timescan_prefix):
                 to_power, rescale = to_db, dtype_conversion
             else:
                 to_power, rescale = False, False

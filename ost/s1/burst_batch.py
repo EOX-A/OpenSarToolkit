@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------
 # Global variable
 PRODUCT_LIST = [
-    'bs.HH', 'bs.VV', 'bs.HV', 'bs.VH',
+    'BS_HH', 'BS_VV', 'BS_HV', 'BS_VH',
     'coh.VV', 'coh.VH', 'coh.HH', 'coh.HV',
     'pol.Entropy', 'pol.Anisotropy', 'pol.Alpha'
 ]
@@ -39,7 +39,7 @@ def bursts_to_ards(
         config_dict['gpt_max_workers'] = int(max_workers / len(burst_gdf))
         max_workers = int(len(burst_gdf))
 
-    out_files = {'bs': [], 'ls': [], 'coh': [], 'pol': []}
+    out_files = {'BS': [], 'ls': [], 'coh': [], 'pol': []}
     # now we run with godale, which works also with 1 worker
     if max_workers == 1 or len(burst_gdf) == 1:
         for burst in proc_inventory.iterrows():
@@ -48,7 +48,7 @@ def bursts_to_ards(
                     burst=burst,
                     config_dict=config_dict
                 )
-            out_files['bs'].append(out_bs)
+            out_files['BS'].append(out_bs)
             out_files['ls'].append(out_ls)
             out_files['coh'].append(out_coh)
             out_files['pol'].append(out_pol)
@@ -61,7 +61,7 @@ def bursts_to_ards(
         ):
             burst_id, burst_date, out_bs, \
                 out_ls, out_pol, out_coh, error = task.result()
-            out_files['bs'].append(out_bs)
+            out_files['BS'].append(out_bs)
             out_files['ls'].append(out_ls)
             out_files['coh'].append(out_coh)
             out_files['pol'].append(out_pol)

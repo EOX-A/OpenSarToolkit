@@ -181,10 +181,10 @@ def create_backscatter_layers(
         # 4 Geocoding
 
         # create namespace for temporary geocoded product
-        out_tc = temp.joinpath(f'{burst_prefix}_bs')
+        out_tc = temp.joinpath(f'{burst_prefix}_BS')
 
         # create namespace for geocoding log
-        tc_log = out_dir.joinpath(f'{burst_prefix}_bs_tc.err_log')
+        tc_log = out_dir.joinpath(f'{burst_prefix}_BS_tc.err_log')
 
         # run terrain correction on calibrated/speckle filtered/db  input
         try:
@@ -201,7 +201,7 @@ def create_backscatter_layers(
 
         # move final backscatter product to actual output directory
         h.move_dimap(
-            out_tc, out_dir.joinpath(f'{burst_prefix}_bs')
+            out_tc, out_dir.joinpath(f'{burst_prefix}_BS')
         )
 
         # ---------------------------------------------------------------------
@@ -234,11 +234,11 @@ def create_backscatter_layers(
             )
 
         # write out check file for tracking that it is processed
-        with open(out_dir.joinpath('.bs.processed'), 'w+') as file:
+        with open(out_dir.joinpath('.BS_processed'), 'w+') as file:
             file.write('passed all tests \n')
 
         return (
-            str(out_dir.joinpath(f'{burst_prefix}_bs').with_suffix('.dim')),
+            str(out_dir.joinpath(f'{burst_prefix}_BS').with_suffix('.dim')),
             out_ls_final,
             None
         )
@@ -378,7 +378,7 @@ def burst_to_ard(burst, config_dict):
 
     # existence of processed files
     pol_file = out_dir.joinpath('.pol.processed').exists()
-    bs_file = out_dir.joinpath('.bs.processed').exists()
+    bs_file = out_dir.joinpath('.BS_processed').exists()
     coh_file = out_dir.joinpath('.coh.processed').exists()
 
     # set all return values initially to None

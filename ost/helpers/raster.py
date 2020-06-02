@@ -241,7 +241,7 @@ def create_tscan_vrt(timescan_dir, config_dict):
 
     # loop through all potential products
     # a products list
-    product_list = ['bs.HH', 'bs.VV', 'bs.HV', 'bs.VH',
+    product_list = ['BS_HH', 'BS_VV', 'BS_HV', 'BS_VH',
                     'coh.VV', 'coh.VH', 'coh.HH', 'coh.HV', 
                     'pol.Entropy', 'pol.Anisotropy', 'pol.Alpha']
     
@@ -304,7 +304,7 @@ def visualise_rgb(filepath, shrink_factor=25):
 
 def get_min(file):
 
-    mins = {'bs_VV': -20, 'bs_VH': -25, 'bs_HH': -20, 'bs_HV': -25,
+    mins = {'BS_VV': -20, 'BS_VH': -25, 'BS_HH': -20, 'BS_HV': -25,
             'coh_VV': 0.1, 'coh_VH': 0.1,
             'pol_Alpha': 60, 'pol.Entropy': 0.1, 'pol_Anisotropy': 0.1,
             'coh_IW1_VV': 0.1, 'coh_IW2_VV': 0.1, 'coh_IW3_VV': 0.1,
@@ -317,7 +317,7 @@ def get_min(file):
 
 def get_max(file):
 
-    maxs = {'bs_VV': 0, 'bs_VH': -12, 'bs_HH': 0, 'bs_HV': -5,
+    maxs = {'BS_VV': 0, 'BS_VH': -12, 'BS_HH': 0, 'BS_HV': -5,
             'coh_VV': 0.8, 'coh_VH': 0.75,
             'pol_Alpha': 80, 'pol_Entropy': 0.8, 'pol_Anisotropy': 0.8,
             'coh_IW1_VV': 0.8, 'coh_IW2_VV': 0.8, 'coh_IW3_VV': 0.8,
