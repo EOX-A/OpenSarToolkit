@@ -347,7 +347,7 @@ def ards_to_timeseries(
     for track in inventory_df.relativeorbit.unique():
         # get the burst directory
         track_dir = opj(processing_dir, track)
-        for pol in ['HH', 'HV', 'VV', 'VH']:
+        for pol in ['VV', 'VH']:
             # create list of dims if polarisation is present
             list_of_dims = sorted(glob.glob(
                 opj(track_dir, '20*', '*BS*dim'))
