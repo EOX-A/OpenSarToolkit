@@ -349,13 +349,9 @@ def ards_to_timeseries(
         track_dir = opj(processing_dir, track)
         for pol in ['HH', 'HV', 'VV', 'VH']:
             # create list of dims if polarisation is present
-            list_of_dims_temp = sorted(glob.glob(
+            list_of_dims = sorted(glob.glob(
                 opj(track_dir, '20*', '*BS*dim'))
             )
-            list_of_dims = []
-            for dim in list_of_dims_temp:
-                if pol.lower() in dim.lower():
-                    list_of_dims.append(dim)
             if len(list_of_dims) == 0:
                 continue
             ard_to_ts.ard_to_ts(
