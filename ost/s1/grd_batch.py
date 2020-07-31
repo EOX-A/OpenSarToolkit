@@ -349,10 +349,6 @@ def ards_to_timeseries(
         track_dir = opj(processing_dir, track)
 
         for pol in ['VV', 'VH']:
-
-            # see if there is actually any imagery in thi polarisation
-            list_of_files = sorted(glob.glob(
-                opj(track_dir, '20*', '*data*', '*ma0*{}*img'.format(pol))))
             # create list of dims if polarisation is present
             list_of_dims = sorted(glob.glob(
                 opj(track_dir, '20*', '*BS*dim'))
