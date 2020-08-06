@@ -314,6 +314,7 @@ def mt_metrics(
             return return_code
         
     if return_code == 0:
+        out_prefix = Path(out_prefix)
         dirname = out_prefix.parent
         check_file = dirname.joinpath(f'.{out_prefix.name}.processed')
         with open(str(check_file), 'w') as file:

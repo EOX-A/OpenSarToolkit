@@ -142,25 +142,26 @@ def convert_to_db(pow_array):
 
 # rescale sar dB dat ot integer format
 def scale_to_int(float_array, min_value, max_value, datatype):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        # set output min and max
+        display_min = 1.
+        if datatype == 'uint8':
+            display_max = 255.
+        elif datatype == 'uint16':
+            display_max = 65535.
+        else:
+            display_max = 65535
 
-    # set output min and max
-    display_min = 1.
-    if datatype == 'uint8':
-        display_max = 255.
-    elif datatype == 'uint16':
-        display_max = 65535.
-    else:
-        display_max = 65535
+        a = min_value - ((max_value - min_value) / (display_max - display_min))
+        x = (max_value - min_value) / (display_max - 1)
 
-    a = min_value - ((max_value - min_value) / (display_max - display_min))
-    x = (max_value - min_value) / (display_max - 1)
+        # float_array[float_array == 0.0] = np.nan
 
-    # float_array[float_array == 0.0] = np.nan
-    float_array[float_array > max_value] = max_value
-    float_array[float_array < min_value] = min_value
+        float_array[float_array > max_value] = max_value
+        float_array[float_array < min_value] = min_value
 
-    stretched = np.divide(np.subtract(float_array, a), x)
-    int_array = np.round(np.nan_to_num(stretched)).astype(datatype)
+        stretched = np.divide(np.subtract(float_array, a), x)
+        int_array = np.round(np.nan_to_num(stretched)).astype(datatype)
 
     return int_array
 
