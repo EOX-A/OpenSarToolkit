@@ -6,7 +6,13 @@ import json
 import glob
 import itertools
 import logging
-import gdal
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 from retry import retry
 
 from godale import Executor

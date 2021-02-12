@@ -5,7 +5,13 @@ import glob
 import itertools
 from pathlib import Path
 
-import gdal
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 import fiona
 import imageio
 import rasterio

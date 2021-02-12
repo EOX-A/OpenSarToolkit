@@ -1,6 +1,12 @@
 import os
 import logging
-import gdal
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 from pathlib import Path
 from datetime import datetime as dt
 from tempfile import TemporaryDirectory
