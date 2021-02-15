@@ -211,10 +211,6 @@ def ard_to_rgb(
                 pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
                              for window in windows
                              )
-                if pol_1data.any() and not pol_2data.any():
-                    raise RuntimeError(
-                        "Something went wrot when reading CO or CR .img data!!!"
-                    )
                 pol_data = []
                 for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
                     pol_data.append((w, arr1, arr2))
