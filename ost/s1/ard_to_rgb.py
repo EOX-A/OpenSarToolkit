@@ -221,8 +221,12 @@ def ard_to_rgb(
                     fargs=[to_db],
                 ):
                     co_array, cr_array, ratio_array, window = task.result()
-                    dst_vv.write(co_array[0,], indexes=1, window=window)
-                    dst_vh.write(cr_array[0,], indexes=1, window=window)
+                    dst_vv.write(co_array[0], indexes=1, window=window)
+                    dst_vh.write(cr_array[0], indexes=1, window=window)
+            if os.stat(outfile_vv).st_size/(1024*1024) - os.stat(outfile_vh).st_size/(1024*1024) > 4:
+                raise RuntimeError(
+                    "VV and VH tif sizes have difference more than 4 MB"
+                )
             return outfile_vv, outfile_vh
         else:
             outfile = outfiles[0]
