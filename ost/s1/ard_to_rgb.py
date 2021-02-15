@@ -149,8 +149,8 @@ def _execute_dual_pol_tif(pols_data, to_db=False):
         cr_array[cr_array == -130] = 0
 
         # remove resampling border artifacts
-        # co_array[co_array <= -40] = 0
-        # cr_array[cr_array <= -40] = 0
+        co_array[co_array <= -40] = 0
+        cr_array[cr_array <= -40] = 0
 
     # turn 0s to nan
     co_array[co_array == 0] = 0
@@ -208,11 +208,11 @@ def ard_to_rgb(
                 pol_1data = np.stack([
                     co.read(window=window, resampling=Resampling.cubic_spline)
                      for window in windows
-                ])
+                ]).astype(np.float32, copy=False)
                 pol_2data = np.stack([
                     cr.read(window=window, resampling=Resampling.cubic_spline)
                     for window in windows
-                ])
+                ]).astype(np.float32, copy=False)
                 if pol_1data.any() and not pol_2data.any():
                     raise RuntimeError(
                         "Something went wrong when reading CO or CR .img data "
