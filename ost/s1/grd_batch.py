@@ -218,7 +218,10 @@ def _execute_grd_batch(
             for s in list_of_scenes:
                 if row.identifier == Sentinel1Scene(s).scene_id:
                     inventory_df.at[i, 'out_dimap'] = out_file
-                    inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
+                    if out_ls_mask is None:
+                        inventory_df.at[i, 'out_ls_mask'] = ""
+                    else:
+                        inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
                     if to_tif and not os.path.isfile(out_files[0]) and \
                             os.path.isfile(out_file):
                         out_pol1, out_pol2 = ard_to_rgb(
