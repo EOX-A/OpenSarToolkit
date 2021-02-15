@@ -149,8 +149,8 @@ def _execute_dual_pol_tif(pols_data, to_db=False):
         cr_array[cr_array == -130] = 0
 
         # remove resampling border artifacts
-        cr_array[cr_array <= -40] = 0
-        cr_array[cr_array <= -40] = 0
+        # co_array[co_array <= -40] = 0
+        # cr_array[cr_array <= -40] = 0
 
     # turn 0s to nan
     co_array[co_array == 0] = 0
