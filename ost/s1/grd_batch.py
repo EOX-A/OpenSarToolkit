@@ -283,12 +283,12 @@ def grd_to_ard_batch(
     ):
         try:
             temp_inv, list_of_scenes = task.result()
+            temp_inv['out_ls_mask'].fillna('', inplace=True)
+            inventory_df.at[i, 'out_dimap'].fillna('', inplace=True)
             for i, row in inventory_df.iterrows():
                 for scene in list_of_scenes:
                     if row.identifier.lower() in scene.lower():
                         inventory_df.at[i, 'out_dimap'] = temp_inv.at[i, 'out_dimap']
-                        if temp_inv.at[i, 'out_ls_mask'] is None:
-                            temp_inv.at[i, 'out_ls_mask'] = ""
                         inventory_df.at[i, 'out_ls_mask'] = temp_inv.at[i, 'out_ls_mask']
                         if single_band_tifs:
                             if single_band_tifs:
