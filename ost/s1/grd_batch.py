@@ -218,10 +218,7 @@ def _execute_grd_batch(
             for s in list_of_scenes:
                 if row.identifier == Sentinel1Scene(s).scene_id:
                     inventory_df.at[i, 'out_dimap'] = out_file
-                    if out_ls_mask is None:
-                        inventory_df.at[i, 'out_ls_mask'] = ""
-                    else:
-                        inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
+                    inventory_df.at[i, 'out_ls_mask'] = out_ls_mask
                     if to_tif and not os.path.isfile(out_files[0]) and \
                             os.path.isfile(out_file):
                         out_pol1, out_pol2 = ard_to_rgb(
@@ -290,6 +287,8 @@ def grd_to_ard_batch(
                 for scene in list_of_scenes:
                     if row.identifier.lower() in scene.lower():
                         inventory_df.at[i, 'out_dimap'] = temp_inv.at[i, 'out_dimap']
+                        if temp_inv.at[i, 'out_ls_mask'] is None:
+                            temp_inv.at[i, 'out_ls_mask'] = ""
                         inventory_df.at[i, 'out_ls_mask'] = temp_inv.at[i, 'out_ls_mask']
                         if single_band_tifs:
                             if single_band_tifs:
