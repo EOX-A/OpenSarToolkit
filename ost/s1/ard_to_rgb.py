@@ -205,12 +205,19 @@ def ard_to_rgb(
             with rasterio.open(outfile_vv, 'w+', **meta) as dst_vv, \
                     rasterio.open(outfile_vh, 'w+', **meta) as dst_vh:
                 windows = [window for ij, window in dst_vv.block_windows()]
-                pol_1data = (co.read(window=window, resampling=Resampling.cubic_spline)
-                             for window in windows
-                             )
-                pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
-                             for window in windows
-                             )
+                pol_1data = np.stack([
+                    co.read(window=window, resampling=Resampling.cubic_spline)
+                     for window in windows
+                ])
+                pol_2data = np.stack([
+                    cr.read(window=window, resampling=Resampling.cubic_spline)
+                    for window in windows
+                ])
+                if pol_1data.any() and not pol_2data.any():
+                    raise RuntimeError(
+                        "Something went wrong when reading CO or CR .img data "
+                        "at the convertion to GTiff!!!"
+                    )
                 pol_data = []
                 for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
                     pol_data.append((w, arr1, arr2))
