@@ -211,6 +211,10 @@ def ard_to_rgb(
                 pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
                              for window in windows
                              )
+                if pol_1data.any() and not pol_2data.any():
+                    raise RuntimeError(
+                        "Something went wrot when reading CO or CR .img data!!!"
+                    )
                 pol_data = []
                 for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
                     pol_data.append((w, arr1, arr2))
@@ -221,6 +225,11 @@ def ard_to_rgb(
                     fargs=[to_db],
                 ):
                     co_array, cr_array, ratio_array, window = task.result()
+                    if co_array.any() and not cr_array.any():
+                        raise RuntimeError(
+                            "When generation single file tiffs array data missmatch!!!"
+                        )
+
                     dst_vv.write(co_array[0,], indexes=1, window=window)
                     dst_vh.write(cr_array[0,], indexes=1, window=window)
             if os.stat(outfile_vv).st_size/(1024*1024) - os.stat(outfile_vh).st_size/(1024*1024) > 4:
