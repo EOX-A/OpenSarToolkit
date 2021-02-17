@@ -206,8 +206,8 @@ def ard_to_rgb(
                 nodata=0,
                 compress='Deflate',
                 tiled=True,
-                block_x_size=512,
-                block_y_size=512
+                blockxsize=512,
+                blockysize=512
             )
             with rasterio.open(outfile_vv, 'w+', **meta) as dst_vv, \
                     rasterio.open(outfile_vh, 'w+', **meta) as dst_vh:
