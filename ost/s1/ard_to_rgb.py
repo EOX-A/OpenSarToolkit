@@ -197,12 +197,12 @@ def ard_to_rgb(
         # get meta data
         meta = co.meta
 
-        if co.height > 1024 or co.width > 1024:
-            blockxsize = 512
-        elif co.height > 512 or co.width > 512:
-            blockxsize = 256
-        elif co.height > 64 or co.width > 64:
+        if co.height <= 256 or co.width <= 256 and co.height > 16 and co.width > 16:
             blockxsize = 16
+        elif co.height <= 1024 and co.width <= 1024 and co.height > 256 and co.width > 256:
+            blockxsize = 256
+        elif co.height > 1024 and co.width > 1024:
+            blockxsize = 512
         else:
             blockxsize = 4
         # update meta
