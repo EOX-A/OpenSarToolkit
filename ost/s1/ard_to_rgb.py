@@ -196,6 +196,15 @@ def ard_to_rgb(
             raise ValueError('CO and CR dimensions do not match!')
         # get meta data
         meta = co.meta
+
+        if co.height > 1024 or co.width > 1024:
+            blockxsize = 512
+        elif co.height > 512 or co.width > 512:
+            blockxsize = 256
+        elif co.height > 64 or co.width > 64:
+            blockxsize = 16
+        else:
+            blockxsize = 4
         # update meta
         if single_band_tifs:
             outfile_vv = outfiles[0]
@@ -206,8 +215,8 @@ def ard_to_rgb(
                 nodata=0,
                 compress='Deflate',
                 tiled=True,
-                blockxsize=512,
-                blockysize=512
+                blockxsize=blockxsize,
+                blockysize=blockxsize
             )
             with rasterio.open(outfile_vv, 'w+', **meta) as dst_vv, \
                     rasterio.open(outfile_vh, 'w+', **meta) as dst_vh:
