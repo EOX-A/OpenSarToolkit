@@ -35,9 +35,9 @@ COPY snap7.varfile $HOME/programs/
 RUN cd  $HOME/programs && \
     wget $SNAP_URL/$TBX && \
     chmod +x $TBX && \
-    ./$TBX -q -varfile snap7.varfile && \
+    # ./$TBX -q -varfile snap7.varfile && \
     rm $TBX && \
-    rm snap7.varfile && \
+    # rm snap7.varfile && \
     cd $HOME/programs && \
     wget https://www.orfeo-toolbox.org/packages/${OTB} && \
     chmod +x $OTB && \
@@ -68,14 +68,14 @@ RUN jupyter labextension install @jupyterlab/geojson-extension
 
 # get OST and tutorials
 RUN cd $HOME && \
-    git clone https://github.com/Scartography/OpenSarToolkit.git && \
+    git clone https://github.com/EOX-A/OpenSarToolkit.git && \
     cd $HOME/OpenSarToolkit && \
     pip install setuptools && \
     pip install -r requirements.txt && \
     pip install -r requirements_test.txt && \
     python setup.py install && \
-    cd $HOME && \
-    git clone https://github.com/Scartography/OST_Notebooks.git
+#    cd $HOME && \
+#    git clone https://github.com/EOX-A/OST_Notebooks.git
 
 # Return Home
 RUN cd $HOME
