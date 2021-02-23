@@ -4,7 +4,7 @@ FROM $BASE_CONTAINER
 USER root
 
 ENV HOME=/home/$NB_USER
-ENV OTB_VERSION="7.1.0" \
+ENV OTB_VERSION="7.2.0" \
     TBX_VERSION="8" \
     TBX_SUBVERSION="0"
 ENV TBX="esa-snap_sentinel_unix_${TBX_VERSION}_${TBX_SUBVERSION}.sh" \
@@ -39,7 +39,7 @@ RUN cd  $HOME/programs && \
     rm $TBX && \
     # rm snap7.varfile && \
     cd $HOME/programs && \
-    wget https://www.orfeo-toolbox.org/packages/${OTB} && \
+    wget https://www.orfeo-toolbox.org/packages/OTB-${OTB}-Linux64.run && \
     chmod +x $OTB && \
     ./${OTB} && \
     rm -f OTB-${OTB_VERSION}-Linux64.run
@@ -73,7 +73,7 @@ RUN cd $HOME && \
     pip install setuptools && \
     pip install -r requirements.txt && \
     pip install -r requirements_test.txt && \
-    python setup.py install && \
+    python setup.py install
 #    cd $HOME && \
 #    git clone https://github.com/EOX-A/OST_Notebooks.git
 
