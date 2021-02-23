@@ -16,10 +16,7 @@ ENV TBX="esa-snap_sentinel_unix_${TBX_VERSION}_${TBX_SUBVERSION}.sh" \
 RUN sed -i -e 's:(groups):(groups 2>/dev/null):' /etc/bash.bashrc
 
 # install gdal as root
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq \
-    libpython3.8.so.1.0 && \
-    rm -rf /var/lib/apt/lists/*  && \
-    alias python=python3
+RUN apt-get update && alias python=python3
 
 # Grant access to folders for user
 RUN fix-permissions $HOME && \
