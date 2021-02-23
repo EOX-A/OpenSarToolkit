@@ -1,4 +1,4 @@
-ARG BASE_CONTAINER=jupyter/scipy-notebook:7a3e968dd212
+ARG BASE_CONTAINER=jupyter/scipy-notebook:016833b15ceb
 FROM $BASE_CONTAINER
 
 USER root
@@ -29,15 +29,18 @@ RUN fix-permissions $HOME && \
     fix-permissions $HOME/programs
 
 # copy the snap installation config file into the container
-COPY snap7.varfile $HOME/programs/
+COPY snap.varfile $HOME/programs/
 
 # Download and install SNAP
 RUN cd  $HOME/programs && \
     wget $SNAP_URL/$TBX && \
     chmod +x $TBX && \
-    ./$TBX -q && \
-    rm $TBX
-    # rm snap7.varfile && \
+    ./$TBX -q -varfile snap.varfile&& \
+    rm $TBX && \
+    rm snap.varfile
+
+# set usable memory to 12G
+RUN echo "-Xmx12G" > /home/ost/programs/snap/bin/gpt.vmoptions
 
 #  Download and install ORFEO Toolbox
 RUN cd $HOME/programs && \
