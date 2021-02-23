@@ -31,14 +31,16 @@ RUN fix-permissions $HOME && \
 # copy the snap installation config file into the container
 COPY snap7.varfile $HOME/programs/
 
-# Download and install SNAP and ORFEO Toolbox
+# Download and install SNAP
 RUN cd  $HOME/programs && \
     wget $SNAP_URL/$TBX && \
     chmod +x $TBX && \
     # ./$TBX -q -varfile snap7.varfile && \
     rm $TBX && \
     # rm snap7.varfile && \
-    cd $HOME/programs && \
+
+#  Download and install ORFEO Toolbox
+RUN cd $HOME/programs && \
     wget https://www.orfeo-toolbox.org/packages/${OTB} && \
     chmod +x $OTB && \
     ./${OTB} && \
@@ -46,9 +48,9 @@ RUN cd  $HOME/programs && \
 
 USER $NB_UID
 
-RUN conda install  --quiet --yes \
+RUN conda install --quiet --yes --force-reinstall --update-all \
     oauthlib \
-    gdal==3.2.1 \
+    gdal==3.2.0 \
     fiona \
     rasterio \
     shapely \
