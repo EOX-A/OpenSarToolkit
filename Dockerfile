@@ -16,8 +16,8 @@ ENV TBX="esa-snap_sentinel_unix_${TBX_VERSION}_${TBX_SUBVERSION}.sh" \
 RUN sed -i -e 's:(groups):(groups 2>/dev/null):' /etc/bash.bashrc
 
 # install gdal as root
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends build-essential gcc g++ git && \
+RUN apt-get update && \
+    apt-get install -yq build-essential gcc g++ git && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     alias python=python3
