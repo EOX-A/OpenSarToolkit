@@ -35,8 +35,8 @@ COPY snap7.varfile $HOME/programs/
 RUN cd  $HOME/programs && \
     wget $SNAP_URL/$TBX && \
     chmod +x $TBX && \
-    # ./$TBX -q -varfile snap7.varfile && \
-    rm $TBX && \
+    ./$TBX -q && \
+    rm $TBX
     # rm snap7.varfile && \
 
 #  Download and install ORFEO Toolbox
