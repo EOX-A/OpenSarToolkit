@@ -18,7 +18,7 @@ RUN sed -i -e 's:(groups):(groups 2>/dev/null):' /etc/bash.bashrc
 # install gdal as root
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libgdal-dev \
     python3-gdal \
-    libspatialindex-dev \
+    libspatialindex-dev && \
     rm -rf /var/lib/apt/lists/*  && \
     alias python=python3
 
