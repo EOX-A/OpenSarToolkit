@@ -17,7 +17,7 @@ RUN sed -i -e 's:(groups):(groups 2>/dev/null):' /etc/bash.bashrc
 
 # install gdal as root
 RUN apt-get update && \
-    apt-get install -yq build-essential gcc g++ git && \
+    apt-get install -yq build-essential gcc g++ git python3 && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     alias python=python3
@@ -34,7 +34,7 @@ COPY snap.varfile $HOME/programs/
 RUN cd  $HOME/programs && \
     wget $SNAP_URL/$TBX && \
     chmod +x $TBX && \
-    ./$TBX -q -varfile snap.varfile&& \
+    ./$TBX -q -varfile snap.varfile && \
     rm $TBX && \
     rm snap.varfile
 
@@ -42,17 +42,17 @@ RUN cd  $HOME/programs && \
 RUN echo "-Xmx12G" > /home/ost/programs/snap/bin/gpt.vmoptions
 
 #  Download and install ORFEO Toolbox
-RUN cd $HOME/programs && \
-    wget https://www.orfeo-toolbox.org/packages/${OTB} && \
-    chmod +x $OTB && \
-    ./${OTB} && \
-    rm -f OTB-${OTB_VERSION}-Linux64.run
+# RUN cd $HOME/programs && \
+#    wget https://www.orfeo-toolbox.org/packages/${OTB} && \
+#    chmod +x $OTB && \
+#    ./${OTB} && \
+#    rm -f OTB-${OTB_VERSION}-Linux64.run
 
 USER $NB_UID
 
 RUN conda install --quiet --yes --force-reinstall --update-all \
     oauthlib \
-    gdal==3.2.0 \
+    gdal \
     fiona \
     rasterio \
     shapely \
