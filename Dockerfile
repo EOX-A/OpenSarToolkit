@@ -17,7 +17,7 @@ RUN sed -i -e 's:(groups):(groups 2>/dev/null):' /etc/bash.bashrc
 
 # install gdal as root
 RUN apt-get update && \
-    apt-get install --yes --no-install-recommends build-essential gcc g++ git && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends build-essential gcc g++ git && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     alias python=python3
