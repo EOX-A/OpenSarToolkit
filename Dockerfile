@@ -19,7 +19,6 @@ RUN sed -i -e 's:(groups):(groups 2>/dev/null):' /etc/bash.bashrc
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yq libgdal-dev \
     python3-gdal \
     libspatialindex-dev \
-    libgfortran3 && \
     rm -rf /var/lib/apt/lists/*  && \
     alias python=python3
 
