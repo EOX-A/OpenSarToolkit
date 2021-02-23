@@ -39,7 +39,7 @@ RUN cd  $HOME/programs && \
     rm $TBX && \
     # rm snap7.varfile && \
     cd $HOME/programs && \
-    wget https://www.orfeo-toolbox.org/packages/OTB-${OTB}-Linux64.run && \
+    wget https://www.orfeo-toolbox.org/packages/${OTB} && \
     chmod +x $OTB && \
     ./${OTB} && \
     rm -f OTB-${OTB_VERSION}-Linux64.run
