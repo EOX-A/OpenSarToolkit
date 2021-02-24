@@ -357,7 +357,7 @@ def ards_to_timeseries(
         for pol in ['VV', 'VH']:
             # create list of dims if polarisation is present
             list_of_dims = sorted(glob.glob(
-                opj(track_dir, '20*', '*BS*dim'))
+                opj(track_dir, '20*', '*bs*dim'))
             )
             if len(list_of_dims) == 0:
                 continue
