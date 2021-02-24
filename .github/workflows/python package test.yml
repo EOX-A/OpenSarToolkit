@@ -36,23 +36,6 @@ jobs:
         CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       run: |
         docker run scartography/opensartoolkit:${GITHUB_REF##*/} /bin/sh -c "pip3 uninstall -y ost; cd /home/jovyan/; git clone https://github.com/EOX-A/OpenSarToolkit.git; cd OpenSarToolkit; git fetch; git checkout ${GITHUB_REF##*/} --; git pull; python3 -m pip install .[test]; python3 -m pytest -v --cov=ost tests/;"
-    - name: Slack test Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-    - name: Slack OST test Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.OST_SLACK_WEBHOOK }}
     - name: Push docker image if tests are ok
       run: |
         docker push scartography/opensartoolkit:${GITHUB_REF##*/}
-    - name: Slack EOX Docker Push Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-    - name: Slack OST Docker Push Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.OST_SLACK_WEBHOOK }}
-
