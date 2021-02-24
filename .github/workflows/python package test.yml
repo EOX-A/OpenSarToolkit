@@ -21,6 +21,9 @@ jobs:
     continue-on-error: ${{ matrix.experimental }}
 
     steps:
+    - name: Git checkout
+      uses: actions/checkout@v1
+
     - name: Branch name
       run: echo running on branch ${GITHUB_REF##*/}
 
