@@ -127,7 +127,7 @@ else:
         Path('/usr/local/snap/bin/gpt'),
         Path('/usr/local/lib/snap/bin/gpt'),
         Path('/Applications/snap/bin/gpt'),
-        Path('/home/jovyan/programs/snap/bin/gpt')
+        Path('/home/ost/programs/snap/bin/gpt')
     ]
 
     # loop trough possible paths and see if we find it
