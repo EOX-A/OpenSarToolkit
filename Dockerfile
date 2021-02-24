@@ -86,4 +86,4 @@ RUN cd $HOME
 
 # Make jupyter lab availible at this docker image
 EXPOSE 8888
-ENTRYPOINT ["jupyter", "lab","--ip=0.0.0.0","--allow-root"]
+CMD jupyter lab --ip='0.0.0.0' --port=8888 --no-browser --allow-root
