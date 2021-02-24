@@ -10,7 +10,7 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
+  build_and_test:
     strategy:
       fail-fast: false
       matrix:
@@ -36,6 +36,17 @@ jobs:
         CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       run: |
         docker run scartography/opensartoolkit:${GITHUB_REF##*/} /bin/sh -c "pip3 uninstall -y ost; cd /home/jovyan/; git clone https://github.com/EOX-A/OpenSarToolkit.git; cd OpenSarToolkit; git fetch; git checkout ${GITHUB_REF##*/} --; git pull; python3 -m pip install .[test]; python3 -m pytest -v --cov=ost tests/;"
-    - name: Push docker image if tests are ok
-      run: |
-        docker push scartography/opensartoolkit:${GITHUB_REF##*/}
+
+  push_to_registry:
+    name: Push Docker image to Docker Hub
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check out the repo
+          uses: actions/checkout@v2
+        - name: Push to Docker Hub
+          uses: docker/build-push-action@v1
+          with:
+            username: ${{ secrets.DOCKER_USERNAME }}
+            password: ${{ secrets.DOCKER_PASSWORD }}
+            repository: scartography/opensartoolkit
+            tag_with_ref: true
