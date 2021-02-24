@@ -131,7 +131,7 @@ def _execute_grd_batch(
     polarisations = Sentinel1Scene(list_of_scenes[0]).polarisation_list
 
     file_id = '{}_{}'.format(acquisition_date, track)
-    out_file = opj(out_dir, '{}_BS.dim'.format(file_id))
+    out_file = opj(out_dir, '{}_bs.dim'.format(file_id))
     out_ls_mask = opj(out_dir, '{}_LS.gpkg'.format(file_id))
 
     if single_band_tifs:

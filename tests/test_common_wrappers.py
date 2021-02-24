@@ -58,7 +58,7 @@ def test_grd_calibration(s1_grd_notnr_ost_product,
             ),
             outfile=os.path.join(
                 grd_project_class.processing_dir,
-                scene_id+'_BS.dim'
+                scene_id+'_bs.dim'
             ),
             logfile=logger,
             calibrate_to=calib,
@@ -74,11 +74,11 @@ def test_grd_speckle_filter(s1_grd_notnr_ost_product,
     return_code = speckle_filter(
         infile=os.path.join(
             grd_project_class.processing_dir,
-            scene_id+'_BS.dim'
+            scene_id+'_bs.dim'
         ),
         outfile=os.path.join(
             grd_project_class.processing_dir,
-            scene_id+'_BS_Spk.dim'
+            scene_id+'_bs_Spk.dim'
         ),
         logfile=logger,
         speckle_dict=grd_project_class.ard_parameters
@@ -95,11 +95,11 @@ def test_grd_tc(s1_grd_notnr_ost_product,
     return_code = terrain_correction(
         infile=os.path.join(
             grd_project_class.processing_dir,
-            scene_id+'_BS_Spk.dim'
+            scene_id+'_bs_Spk.dim'
         ),
         outfile=os.path.join(
             grd_project_class.processing_dir,
-            scene_id+'_BS_Spk_TC.dim'
+            scene_id+'_bs_Spk_TC.dim'
         ),
         logfile=logger,
         resolution=grd_project_class.ard_parameters
