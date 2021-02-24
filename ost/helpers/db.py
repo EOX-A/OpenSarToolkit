@@ -1,7 +1,13 @@
 import getpass
 import os
 import logging
-import ogr
+try:
+    import ogr
+except:
+    try:
+        from osgeo import ogr
+    except Exception as e:
+        raise e
 import psycopg2 as pg
 
 from ost.helpers.vector import get_proj4, reproject_geometry

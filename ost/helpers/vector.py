@@ -10,8 +10,14 @@ import rasterio
 import numpy.ma as ma
 from affine import Affine
 
-import osr
-import ogr
+try:
+    import osr, ogr
+except:
+    try:
+        from osgeo import osr, ogr
+    except Exception as e:
+        raise e
+
 import geopandas as gpd
 import logging
 

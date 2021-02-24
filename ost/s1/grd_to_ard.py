@@ -3,7 +3,13 @@ import logging
 import glob
 import time
 import numpy as np
-import gdal
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 from retry import retry
 
 from os.path import join as opj

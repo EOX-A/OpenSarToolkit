@@ -1,5 +1,5 @@
 fiona
-gdal
+gdal==3.2.1
 godale
 geopandas
 pyproj

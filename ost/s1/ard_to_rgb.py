@@ -149,7 +149,7 @@ def _execute_dual_pol_tif(pols_data, to_db=False):
         cr_array[cr_array == -130] = 0
 
         # remove resampling border artifacts
-        cr_array[cr_array <= -40] = 0
+        co_array[co_array <= -40] = 0
         cr_array[cr_array <= -40] = 0
 
     # turn 0s to nan
@@ -193,24 +193,42 @@ def ard_to_rgb(
     with rasterio.open(co_pol) as co,  rasterio.open(cross_pol) as cr:
         # !assure that dimensions match ####
         if co.shape != cr.shape:
-            logger.info('dimensions do not match')
+            raise ValueError('CO and CR dimensions do not match!')
         # get meta data
         meta = co.meta
-        # update meta
 
+        if co.height <= 256 or co.width <= 256 and co.height > 16 and co.width > 16:
+            blockxsize = 16
+        elif co.height <= 1024 and co.width <= 1024 and co.height > 256 and co.width > 256:
+            blockxsize = 256
+        elif co.height > 1024 and co.width > 1024:
+            blockxsize = 512
+        else:
+            blockxsize = 4
+        # update meta
         if single_band_tifs:
             outfile_vv = outfiles[0]
             outfile_vh = outfiles[1]
-            meta.update(driver=driver, count=1, nodata=0, compress='Deflate')
+            meta.update(
+                driver=driver,
+                count=1,
+                nodata=0,
+                compress='Deflate',
+                tiled=True,
+                blockxsize=blockxsize,
+                blockysize=blockxsize
+            )
             with rasterio.open(outfile_vv, 'w+', **meta) as dst_vv, \
                     rasterio.open(outfile_vh, 'w+', **meta) as dst_vh:
                 windows = [window for ij, window in dst_vv.block_windows()]
-                pol_1data = (co.read(window=window, resampling=Resampling.cubic_spline)
-                             for window in windows
-                             )
-                pol_2data = (cr.read(window=window, resampling=Resampling.cubic_spline)
-                             for window in windows
-                             )
+                pol_1data = (
+                    co.read(window=window, resampling=Resampling.cubic_spline)
+                    for window in windows
+                )
+                pol_2data = (
+                    cr.read(window=window, resampling=Resampling.cubic_spline)
+                    for window in windows
+                )
                 pol_data = []
                 for w, arr1, arr2 in zip(windows, pol_1data, pol_2data):
                     pol_data.append((w, arr1, arr2))
@@ -221,8 +239,16 @@ def ard_to_rgb(
                     fargs=[to_db],
                 ):
                     co_array, cr_array, ratio_array, window = task.result()
-                    dst_vv.write(co_array[0,], indexes=1, window=window)
-                    dst_vh.write(cr_array[0,], indexes=1, window=window)
+                    if co_array.any() and not cr_array.any():
+                        raise RuntimeError(
+                            "When generation single file tiffs array data missmatch!!!"
+                        )
+                    dst_vv.write(co_array[0], indexes=1, window=window)
+                    dst_vh.write(cr_array[0], indexes=1, window=window)
+            if os.stat(outfile_vv).st_size/(1024*1024) - os.stat(outfile_vh).st_size/(1024*1024) > 4:
+                raise RuntimeError(
+                    "VV and VH tif sizes have difference more than 4 MB"
+                )
             return outfile_vv, outfile_vh
         else:
             outfile = outfiles[0]
