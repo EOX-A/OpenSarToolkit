@@ -32,18 +32,18 @@ COPY snap.varfile $HOME/programs/
 
 # Download and install SNAP
 RUN cd  $HOME/programs && \
-    wget $SNAP_URL/$TBX && \
+    wget -nv $SNAP_URL/$TBX && \
     chmod +x $TBX && \
     ./$TBX -q -varfile snap.varfile && \
     rm $TBX && \
     rm snap.varfile
 
 # set usable memory to 12G
-RUN echo "-Xmx12G" > $HOME/programs/snap/bin/gpt.vmoptions
+# RUN echo "-Xmx12G" > $HOME/programs/snap/bin/gpt.vmoptions
 
 #  Download and install ORFEO Toolbox
 # RUN cd $HOME/programs && \
-#    wget https://www.orfeo-toolbox.org/packages/${OTB} && \
+#    wget -nv https://www.orfeo-toolbox.org/packages/${OTB} && \
 #    chmod +x $OTB && \
 #    ./${OTB} && \
 #    rm -f OTB-${OTB_VERSION}-Linux64.run

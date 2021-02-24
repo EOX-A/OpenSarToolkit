@@ -15,36 +15,28 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [ 3.8 ]
-        rasterio-version: [ 1.1.4, "latest" ]
         experimental: [ false ]
     runs-on: ubuntu-latest
     # runs-on :EOX_OpenSarToolkit
     continue-on-error: ${{ matrix.experimental }}
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Git checkout
+      uses: actions/checkout@v1
 
-    - name: Extract branch name
-      shell: bash
-      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-      id: extract_branch
+    - name: Branch name
+      run: echo running on branch ${GITHUB_REF##*/}
 
-    - name: Build Newest Docker Image
+    - name: Build Newest Docker Image of branch extract_branch
       run: |
-        docker build -t scartography/opensartoolkit:extract_branch ./
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
+        docker build -t scartography/opensartoolkit:${GITHUB_REF##*/} ./
 
     - name: Test at the docker image created
       env:
         CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       run: |
-        docker run -it scartography/opensartoolkit:extract_branch pytest -v --cov ost
-    - name: Coveralls
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        docker run -it scartography/opensartoolkit:${GITHUB_REF##*/} pytest -v --cov ost
+    - name: Push docker image if tests are ok
       run: |
-        coveralls
+        docker push scartography/opensartoolkit:${GITHUB_REF##*/}
+
