@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# This workflow will build docker image and run tests on it (We need to use a custom image due to ESA SNAP Toolbox)
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: Python package test
@@ -21,9 +21,6 @@ jobs:
     continue-on-error: ${{ matrix.experimental }}
 
     steps:
-    - name: Git checkout
-      uses: actions/checkout@v1
-
     - name: Branch name
       run: echo running on branch ${GITHUB_REF##*/}
 
