@@ -39,7 +39,7 @@ RUN cd  $HOME/programs && \
     rm snap.varfile
 
 # set usable memory to 12G
-RUN echo "-Xmx12G" > /home/ost/programs/snap/bin/gpt.vmoptions
+RUN echo "-Xmx12G" > $HOME/programs/snap/bin/gpt.vmoptions
 
 #  Download and install ORFEO Toolbox
 # RUN cd $HOME/programs && \
@@ -74,6 +74,7 @@ RUN jupyter labextension install @jupyterlab/geojson-extension
 RUN cd $HOME && \
     git clone https://github.com/EOX-A/OpenSarToolkit.git && \
     cd $HOME/OpenSarToolkit && \
+    git checkout gdal3 && \
     pip install setuptools && \
     pip install -r requirements.txt && \
     pip install -r requirements_test.txt && \
