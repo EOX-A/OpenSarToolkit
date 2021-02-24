@@ -4,7 +4,7 @@ FROM $BASE_CONTAINER
 USER root
 
 ENV HOME=/home/$NB_USER
-ENV OTB_VERSION="7.2.0" \
+ENV OTB_VERSION="7.1.0" \
     TBX_VERSION="8" \
     TBX_SUBVERSION="0"
 ENV TBX="esa-snap_sentinel_unix_${TBX_VERSION}_${TBX_SUBVERSION}.sh" \
@@ -42,7 +42,7 @@ RUN cd  $HOME/programs && \
 RUN echo "-Xmx12G" > /home/ost/programs/snap/bin/gpt.vmoptions
 
 #  Download and install ORFEO Toolbox
-# RUN cd $HOME/programs && \
+#RUN cd $HOME/programs && \
 #    wget -nv https://www.orfeo-toolbox.org/packages/${OTB} && \
 #    chmod +x $OTB && \
 #    ./${OTB} && \
