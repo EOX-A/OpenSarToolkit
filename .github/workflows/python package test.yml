@@ -1,0 +1,48 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ 3.6, 3.7, 3.8 ]
+        rasterio-version: [ 1.1.4, "latest" ]
+        experimental: [ false ]
+    runs-on: scartography/opensartoolkit:gdal3
+    continue-on-error: ${{ matrix.experimental }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      env:
+        RASTERIO_VERSION: ${{ matrix.rasterio-version }}
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      run: |
+        if [ $RASTERIO_VERSION == "latest" ]; then pip install rasterio --no-binary :all:; else pip install rasterio==$RASTERIO_VERSION --no-binary :all:; fi;
+        pip install -r requirements.txt -r requirements_test.txt
+        pip install -e
+    - name: Test with pytest
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      run: |
+        pytest -v --cov ost
+    - name: Coveralls
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        coveralls
