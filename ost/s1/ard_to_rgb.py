@@ -69,7 +69,7 @@ def execute_burst_to_tif(dim_file, out_path, driver='GTiff', to_db=False):
 
             border_mask = ras.np_binary_erosion(
                 co_array,
-            ).astype(np.bool)
+            ).astype(bool)
 
             co_array = np.where(border_mask, co_array, 0)
             cr_array = np.where(border_mask, cr_array, 0)

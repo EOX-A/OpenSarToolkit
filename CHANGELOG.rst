@@ -7,6 +7,7 @@ Changelog
 -----
 * Proper tested ``GDAL 3.1.3`` compability
 * switched from TRAVIS CI to GITLAB Actions
+* update some ``is`` statements and ``np.bool`` to just ``bool`` as it is recomended by numpy
 
 -----
 0.9.8

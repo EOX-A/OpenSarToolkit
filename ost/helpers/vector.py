@@ -54,7 +54,7 @@ def ls_to_vector(infile, out_path=None, driver="GPKG", buffer=2):
             ).astype(np.uint8, copy=False),
             mask=np.expand_dims(
                 buffer_array(np.where(src.read(1) > 0, 1, 0), buffer=buffer), axis=0
-            ).astype(np.bool, copy=False)
+            ).astype(bool, copy=False)
         )
         shapes = rasterio.features.shapes(ls_arr.data,
                                           connectivity=4,
@@ -89,11 +89,11 @@ def buffer_array(arr, buffer=0):
         raise TypeError("not a NumPy array")
     elif arr.ndim != 2:
         raise TypeError("array not 2-dimensional")
-    elif arr.dtype != np.bool:
-        arr = arr.astype(np.bool)
+    elif arr.dtype != bool:
+        arr = arr.astype(bool)
 
     if buffer == 0 or not arr.any():
-        return arr.astype(np.bool, copy=False)
+        return arr.astype(bool, copy=False)
     else:
         return rasterio.features.geometry_mask(
             (
@@ -105,7 +105,7 @@ def buffer_array(arr, buffer=0):
             arr.shape,
             Affine(1.0, 0.0, 0.0, 0.0, 1.0, 0.0),
             invert=True
-        ).astype(np.bool, copy=False)
+        ).astype(bool, copy=False)
 
 
 def get_epsg(prjfile):
