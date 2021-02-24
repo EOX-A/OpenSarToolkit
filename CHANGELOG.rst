@@ -3,6 +3,17 @@ Changelog
 #########
 
 -----
+0.9.9
+-----
+* Proper tested ``GDAL 3.1.3`` compability
+* switched from TRAVIS CI to GITLAB Actions
+
+-----
+0.9.8
+-----
+* Minor version upgrades not to conflict ``GDAL3`` dependend packages
+
+-----
 0.9.7
 -----
 * added asf search
