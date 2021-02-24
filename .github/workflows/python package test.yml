@@ -5,7 +5,7 @@ name: Python package test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, gdal3 ]
   pull_request:
     branches: [ master ]
 
@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ 3.6, 3.7, 3.8 ]
+        python-version: [ 3.8 ]
         rasterio-version: [ 1.1.4, "latest" ]
         experimental: [ false ]
     runs-on: EOX_OpenSarToolkit
