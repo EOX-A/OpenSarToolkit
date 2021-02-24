@@ -5,7 +5,7 @@ name: Python package test
 
 on:
   push:
-    branches: [ master, gdal3 ]
+    branches: [ master, gdal3, github_actions ]
   pull_request:
     branches: [ master ]
 
@@ -23,24 +23,25 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Extract branch name
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+
+    - name: Build Newest Docker Image
+      run: |
+        docker build -t scartography/opensartoolkit:extract_branch ./
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      env:
-        RASTERIO_VERSION: ${{ matrix.rasterio-version }}
-        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-      run: |
-        if [ $RASTERIO_VERSION == "latest" ]; then pip install rasterio --no-binary :all:; else pip install rasterio==$RASTERIO_VERSION --no-binary :all:; fi;
-        pip install -r requirements.txt -r requirements_test.txt
-        pip install -e
-    - name: Test with pytest
+    - name: Test at the docker image created
       env:
         CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       run: |
-        pytest -v --cov ost
+        docker run -it scartography/opensartoolkit:extract_branch pytest -v --cov ost
     - name: Coveralls
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
