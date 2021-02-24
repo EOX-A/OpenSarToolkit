@@ -16,8 +16,8 @@ jobs:
       matrix:
         python-version: [ 3.8 ]
         experimental: [ false ]
-    # runs-on: ubuntu-latest
-    runs-on: [self-hosted, s1]
+    runs-on: ubuntu-latest
+    # runs-on: [self-hosted, s1] # Needs to update git version on maplab to 2.9
     continue-on-error: ${{ matrix.experimental }}
 
     steps:
