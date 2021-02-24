@@ -16,8 +16,8 @@ jobs:
       matrix:
         python-version: [ 3.8 ]
         experimental: [ false ]
-    runs-on: ubuntu-latest
-    # runs-on :EOX_OpenSarToolkit
+    # runs-on: ubuntu-latest
+    runs-on: OST_runner
     continue-on-error: ${{ matrix.experimental }}
 
     steps:

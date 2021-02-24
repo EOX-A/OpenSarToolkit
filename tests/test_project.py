@@ -1,4 +1,5 @@
 import os
+import rasterio
 from ost.helpers.settings import CONFIG_CHECK
 
 

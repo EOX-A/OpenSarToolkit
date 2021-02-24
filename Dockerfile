@@ -39,7 +39,7 @@ RUN cd  $HOME/programs && \
     rm snap.varfile
 
 # set usable memory to 12G
-# RUN echo "-Xmx12G" > $HOME/programs/snap/bin/gpt.vmoptions
+RUN echo "-Xmx12G" > /home/ost/programs/snap/bin/gpt.vmoptions
 
 #  Download and install ORFEO Toolbox
 # RUN cd $HOME/programs && \
