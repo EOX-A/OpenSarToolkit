@@ -4,6 +4,12 @@ import numpy as np
 import glob
 import itertools
 from pathlib import Path
+import fiona
+import imageio
+
+import rasterio
+import rasterio.mask
+from rasterio.features import shapes
 
 try:
     import gdal
@@ -12,11 +18,6 @@ except:
         from osgeo import gdal
     except Exception as e:
         raise e
-import fiona
-import imageio
-import rasterio
-import rasterio.mask
-from rasterio.features import shapes
 
 from ost.helpers import helpers as h
 
