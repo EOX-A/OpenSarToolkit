@@ -118,13 +118,13 @@ def ard_slc_to_rgb(
     height = arr.shape[1]
     blockxsize = GTIFF_OST_PROFILE["blockxsize"]
     blockysize = GTIFF_OST_PROFILE["blockysize"]
-    if co.height <= 256 or co.width <= 256 and co.height > 16 and co.width > 16:
+    if height <= 256 or width <= 256 and height > 16 and width > 16:
         blockxsize = 16
         blockysize = 16
-    elif co.height <= 1024 and co.width <= 1024 and co.height > 256 and co.width > 256:
+    elif height <= 1024 and width <= 1024 and height > 256 and width > 256:
         blockxsize = 256
         blockysize = 256
-    elif co.height > 1024 and co.width > 1024:
+    elif height > 1024 and width > 1024:
         blockxsize = 512
         blockysize = 512
     else:
