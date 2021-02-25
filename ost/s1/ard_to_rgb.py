@@ -213,6 +213,7 @@ def ard_to_rgb(
                 driver=driver,
                 count=1,
                 nodata=0,
+                dtype="float32",
                 compress='Deflate',
                 tiled=True,
                 blockxsize=blockxsize,
