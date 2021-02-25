@@ -17,7 +17,7 @@ RUN sed -i -e 's:(groups):(groups 2>/dev/null):' /etc/bash.bashrc
 
 # install gdal as root
 RUN apt-get update && \
-    apt-get install -yq build-essential gcc g++ git python3 && \
+    apt-get install -yq build-essential gcc g++ git python3 libgfortran5 && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     alias python=python3
