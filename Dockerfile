@@ -3,7 +3,7 @@ FROM $BASE_CONTAINER
 
 USER root
 
-ARG OST_BRANCH=master
+ARG OST_BRANCH
 
 ENV HOME=/home/$NB_USER
 ENV OTB_VERSION="7.1.0" \
@@ -74,7 +74,7 @@ RUN jupyter labextension install @jupyterlab/geojson-extension
 
 # get OST and tutorials
 RUN cd $HOME && \
-    git clone -b $OST_BRANCH https://github.com/EOX-A/OpenSarToolkit.git && \
+    git clone https://github.com/EOX-A/OpenSarToolkit.git && \
     cd $HOME/OpenSarToolkit && \
     pip install setuptools && \
     pip install -r requirements.txt && \
