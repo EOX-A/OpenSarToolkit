@@ -25,16 +25,13 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Branch name
-      run: echo running on branch ${{ github.head_ref }}
+      run: echo running on branch ${GITHUB_HEAD_REF}
     - name: Prepare
       id: prep
       run: |
         DOCKER_IMAGE=scartography/opensartoolkit
-        VERSION=${{ github.head_ref }}
+        VERSION=${GITHUB_HEAD_REF}
         TAGS="${DOCKER_IMAGE}:${VERSION}"
-        if [ "${{ github.event_name }}" = "push" ]; then
-          TAGS="$TAGS,${DOCKER_IMAGE}:sha-${GITHUB_SHA::8}"
-        fi
         echo ::set-output name=version::${VERSION}
         echo ::set-output name=tags::${TAGS}
         echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -56,10 +53,10 @@ jobs:
           org.opencontainers.image.source=${{ github.event.repository.html_url }}
           org.opencontainers.image.created=${{ steps.prep.outputs.created }}
           org.opencontainers.image.revision=${{ github.sha }}
-        build-args: OST_BRANCH=${{ github.head_ref }}
+        build-args: OST_BRANCH=${GITHUB_HEAD_REF}
 
     - name: Test at the docker image created
       env:
         CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       run: |
-        docker run scartography/opensartoolkit:${{ github.head_ref }} /bin/sh -c "pip3 uninstall -y ost; cd /home/jovyan/; git clone https://github.com/EOX-A/OpenSarToolkit.git; cd OpenSarToolkit; git fetch; git checkout ${{ github.head_ref }} --; git pull; python3 -m pip install .[test]; python3 -m pytest -v --cov=ost tests/;"
+        docker run scartography/opensartoolkit:${GITHUB_HEAD_REF} /bin/sh -c "pip3 uninstall -y ost; cd /home/jovyan/; git clone https://github.com/EOX-A/OpenSarToolkit.git; cd OpenSarToolkit; git fetch; git checkout ${GITHUB_HEAD_REF} --; git pull; python3 -m pip install .[test]; python3 -m pytest -v --cov=ost tests/;"
