@@ -56,7 +56,6 @@ jobs:
     - name: Build and push
       uses: docker/build-push-action@v2
       with:
-        build-args: OST_BRANCH=${GITHUB_REF##*/}
         context: .
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.prep.outputs.tags }}
@@ -64,6 +63,7 @@ jobs:
           org.opencontainers.image.source=${{ github.event.repository.html_url }}
           org.opencontainers.image.created=${{ steps.prep.outputs.created }}
           org.opencontainers.image.revision=${{ github.sha }}
+        build-args: OST_BRANCH=${GITHUB_REF##*/}
 
     - name: Test at the docker image created
       env:
