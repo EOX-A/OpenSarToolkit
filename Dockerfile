@@ -1,8 +1,9 @@
 ARG BASE_CONTAINER=jupyter/scipy-notebook:016833b15ceb
-ARG OST_BRANCH=master
 FROM $BASE_CONTAINER
 
 USER root
+
+ARG OST_BRANCH=master
 
 ENV HOME=/home/$NB_USER
 ENV OTB_VERSION="7.1.0" \
