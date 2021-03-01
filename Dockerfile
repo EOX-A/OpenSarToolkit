@@ -73,7 +73,7 @@ RUN jupyter labextension install @jupyterlab/geojson-extension
 
 # get OST and tutorials
 RUN cd $HOME && \
-    git clone -b $OST_BRANCH --single-branch https://github.com/EOX-A/OpenSarToolkit.git && \
+    git clone -b $OST_BRANCH https://github.com/EOX-A/OpenSarToolkit.git && \
     cd $HOME/OpenSarToolkit && \
     pip install setuptools && \
     pip install -r requirements.txt && \
