@@ -1,6 +1,8 @@
 ARG BASE_CONTAINER=jupyter/scipy-notebook:016833b15ceb
-ARG OST_BRANCH=master
+
 FROM $BASE_CONTAINER
+
+ARG OST_BRANCH=master
 
 USER root
 
