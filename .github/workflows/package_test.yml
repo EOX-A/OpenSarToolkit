@@ -24,13 +24,24 @@ jobs:
     - name: Git checkout
       uses: actions/checkout@v2
 
-    - name: Branch name
-      run: echo running on branch ${GITHUB_HEAD_REF}
+      - name: Get branch name (merge)
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+
+      - name: Get branch name (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+
+      - name: Check the Branch name
+        run: echo ${{ env.BRANCH_NAME }}
+
     - name: Prepare
       id: prep
       run: |
         DOCKER_IMAGE=scartography/opensartoolkit
-        VERSION=${GITHUB_HEAD_REF}
+        VERSION=${{ env.BRANCH_NAME }}
         TAGS="${DOCKER_IMAGE}:${VERSION}"
         echo ::set-output name=version::${VERSION}
         echo ::set-output name=tags::${TAGS}
@@ -53,10 +64,10 @@ jobs:
           org.opencontainers.image.source=${{ github.event.repository.html_url }}
           org.opencontainers.image.created=${{ steps.prep.outputs.created }}
           org.opencontainers.image.revision=${{ github.sha }}
-        build-args: OST_BRANCH=${GITHUB_HEAD_REF}
+        build-args: OST_BRANCH=${{ env.BRANCH_NAME }}
 
     - name: Test at the docker image created
       env:
         CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
       run: |
-        docker run scartography/opensartoolkit:${GITHUB_HEAD_REF} /bin/sh -c "pip3 uninstall -y ost; cd /home/jovyan/; git clone https://github.com/EOX-A/OpenSarToolkit.git; cd OpenSarToolkit; git fetch; git checkout ${GITHUB_HEAD_REF} --; git pull; python3 -m pip install .[test]; python3 -m pytest -v --cov=ost tests/;"
+        docker run scartography/opensartoolkit:${{ env.BRANCH_NAME }} /bin/sh -c "pip3 uninstall -y ost; cd /home/jovyan/; git clone https://github.com/EOX-A/OpenSarToolkit.git; cd OpenSarToolkit; git fetch; git checkout ${{ env.BRANCH_NAME }} --; git pull; python3 -m pip install .[test]; python3 -m pytest -v --cov=ost tests/;"
