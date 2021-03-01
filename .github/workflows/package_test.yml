@@ -3,11 +3,7 @@
 
 name: Build, Test and Push OST DockerImage
 
-on:
-  push:
-    branches: [ master, ${GITHUB_REF#refs/heads/} ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 jobs:
   build_push_and_test:
