@@ -1,4 +1,5 @@
 ARG BASE_CONTAINER=jupyter/scipy-notebook:016833b15ceb
+ARG OST_BRANCH=master
 FROM $BASE_CONTAINER
 
 USER root
@@ -72,7 +73,7 @@ RUN jupyter labextension install @jupyterlab/geojson-extension
 
 # get OST and tutorials
 RUN cd $HOME && \
-    git clone https://github.com/EOX-A/OpenSarToolkit.git && \
+    git clone -b $OST_BRANCH --single-branch https://github.com/EOX-A/OpenSarToolkit.git && \
     cd $HOME/OpenSarToolkit && \
     pip install setuptools && \
     pip install -r requirements.txt && \
