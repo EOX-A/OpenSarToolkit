@@ -1,4 +1,5 @@
 import os
+import rasterio
 from ost.helpers.settings import CONFIG_CHECK
 
 
@@ -27,6 +28,8 @@ def test_grds_to_ards(grd_project_class):
             for i, row in grd_project_class.inventory.iterrows():
                 assert os.path.isfile(row.out_dimap)
                 assert os.path.isfile(row.out_tif)
+                with rasterio.open(row.out_tif, "r") as test_tif:
+                    assert test_tif.read(1).any()
 
 
 # Test GRDs to ARD kind of batch
@@ -50,6 +53,8 @@ def test_grds_to_single_band_tifs(grd_project_class):
                 assert os.path.isfile(row.out_dimap)
                 assert os.path.isfile(row.out_vv)
                 assert os.path.isfile(row.out_vh)
+                with rasterio.open(row.out_vv, "r") as test_tif:
+                    assert test_tif.read(1).any()
 
 
 # Test Bursts to ARD kind of batch

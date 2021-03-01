@@ -1,5 +1,5 @@
 # Open SAR Toolkit (OST)
-[![Build Status](https://travis-ci.org/EOX-A/OpenSarToolkit.svg?branch=master)](https://travis-ci.org/EOX-A/OpenSarToolkit)
+![Test and Docker Build](https://github.com/EOX-A/OpenSarToolkit/actions/workflows/package_test.yml/badge.svg)
 
 ## Objective
 

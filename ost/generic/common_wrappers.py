@@ -16,11 +16,11 @@ def calibration(infile, outfile, logfile, calibrate_to, gpt_max_workers=os.cpu_c
     # transform calibration parameter to snap readable
     sigma0, beta0, gamma0 = 'false', 'false', 'false'
 
-    if calibrate_to is 'gamma0':
+    if calibrate_to == 'gamma0':
         gamma0 = 'true'
-    elif calibrate_to is 'beta0':
+    elif calibrate_to == 'beta0':
         beta0 = 'true'
-    elif calibrate_to is 'sigma0':
+    elif calibrate_to == 'sigma0':
         sigma0 = 'true'
 
     logger.info('Calibrating the product to {}.'.format(calibrate_to))

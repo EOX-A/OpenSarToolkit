@@ -3,6 +3,24 @@ Changelog
 #########
 
 -----
+0.9.9
+-----
+* testing against ``python 3.8``
+* Proper tested ``GDAL 3.x.x`` compability
+* switched from TRAVIS CI to GITLAB Actions
+* update some ``is`` statements and ``np.bool`` to just ``bool`` as it is recomended by numpy
+* update ``Dockerfile`` and upload newer image
+    * now as a part of the CI
+    * includes ``SNAP 8.0.0``
+    * removed ``OrfeoToolbox`` completely for now as it does not easily support python 3.8(maybe forever)
+    * ``libgfortran5`` package is required for most of SLC processing
+
+-----
+0.9.8
+-----
+* Minor version upgrades not to conflict ``GDAL3`` dependend packages
+
+-----
 0.9.7
 -----
 * added asf search

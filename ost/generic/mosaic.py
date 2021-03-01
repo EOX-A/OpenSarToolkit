@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
 from os.path import join as opj
-import gdal
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 import json
 import numpy as np
 import rasterio

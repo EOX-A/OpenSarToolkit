@@ -4,13 +4,20 @@ import numpy as np
 import glob
 import itertools
 from pathlib import Path
-
-import gdal
 import fiona
 import imageio
+
 import rasterio
 import rasterio.mask
 from rasterio.features import shapes
+
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 
 from ost.helpers import helpers as h
 
@@ -473,7 +480,7 @@ def create_rgb_jpeg(filelist,
 
 def np_binary_erosion(
         input_array,
-        structure=np.ones((3, 3)).astype(np.bool)
+        structure=np.ones((3, 3)).astype(bool)
 ):
     '''NumPy binary erosion function
     No error checking on input array (type)
@@ -499,12 +506,12 @@ def np_binary_erosion(
         input_shape[0] + structure.shape[0] - 1,
         input_shape[1] + structure.shape[1] - 1
     )
-    input_pad_array = np.zeros(pad_shape).astype(np.bool)
+    input_pad_array = np.zeros(pad_shape).astype(bool)
     input_pad_array[1:rows+1, 1:cols+1] = input_array
-    binary_erosion = np.zeros(pad_shape).astype(np.bool)
+    binary_erosion = np.zeros(pad_shape).astype(bool)
 
     # Cast structure element to boolean
-    struc_mask = structure.astype(np.bool)
+    struc_mask = structure.astype(bool)
     # Iterate over each cell
     for row in range(rows):
         for col in range(cols):

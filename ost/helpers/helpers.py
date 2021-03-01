@@ -9,7 +9,13 @@ import time
 from datetime import timedelta
 import zipfile
 import logging
-import gdal
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 import geopandas as gpd
 from shapely.wkt import loads
 from urllib.request import urlopen

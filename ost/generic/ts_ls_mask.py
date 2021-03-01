@@ -4,7 +4,13 @@ import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import gdal
+try:
+    import gdal
+except:
+    try:
+        from osgeo import gdal
+    except Exception as e:
+        raise e
 import rasterio
 import numpy as np
 

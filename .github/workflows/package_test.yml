@@ -1,0 +1,69 @@
+# This workflow will build docker image and run tests on it (We need to use a custom image due to ESA SNAP Toolbox)
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Build, Test and Push OST DockerImage
+
+on: [push, pull_request]
+
+jobs:
+  build_push_and_test:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ 3.8 ]
+        experimental: [ false ]
+    runs-on: ubuntu-latest
+    # runs-on: [self-hosted, s1] # Needs to update git version on maplab to 2.9
+    continue-on-error: ${{ matrix.experimental }}
+
+    steps:
+    - name: Git checkout
+      uses: actions/checkout@v2
+
+    - name: Get branch name (merge)
+      if: github.event_name != 'pull_request'
+      shell: bash
+      run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+
+    - name: Get branch name (pull request)
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+
+    - name: Check the Branch name
+      run: echo ${{ env.BRANCH_NAME }}
+
+    - name: Prepare
+      id: prep
+      run: |
+        DOCKER_IMAGE=scartography/opensartoolkit
+        VERSION=${{ env.BRANCH_NAME }}
+        TAGS="${DOCKER_IMAGE}:${VERSION}"
+        echo ::set-output name=version::${VERSION}
+        echo ::set-output name=tags::${TAGS}
+        echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+    - name: Login to DockerHub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.prep.outputs.tags }}
+        labels: |
+          org.opencontainers.image.source=${{ github.event.repository.html_url }}
+          org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+          org.opencontainers.image.revision=${{ github.sha }}
+        build-args: OST_BRANCH=${{ env.BRANCH_NAME }}
+
+    - name: Test at the docker image created
+      env:
+        CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      run: |
+        docker run scartography/opensartoolkit:${{ env.BRANCH_NAME }} /bin/sh -c "cd /home/jovyan/OpenSarToolkit; python3 -m pytest -v --cov=ost tests/;"
