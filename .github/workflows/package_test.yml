@@ -5,7 +5,7 @@ name: Build, Test and Push OST DockerImage
 
 on:
   push:
-    branches: [ master, gdal3, github_actions ]
+    branches: [ master, ${GITHUB_REF#refs/heads/} ]
   pull_request:
     branches: [ master ]
 
