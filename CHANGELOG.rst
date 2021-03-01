@@ -10,6 +10,7 @@ Changelog
 * switched from TRAVIS CI to GITLAB Actions
 * update some ``is`` statements and ``np.bool`` to just ``bool`` as it is recomended by numpy
 * update ``Dockerfile`` and upload newer image
+    * now as a part of the CI
     * includes ``SNAP 8.0.0``
     * removed ``OrfeoToolbox`` completely for now as it does not easily support python 3.8(maybe forever)
     * ``libgfortran5`` package is required for most of SLC processing
