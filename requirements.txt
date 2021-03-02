@@ -9,6 +9,7 @@ pandas
 psycopg2-binary
 rasterio
 requests
+rtree
 scipy
 shapely
 tqdm
