@@ -51,7 +51,7 @@ RUN echo "-Xmx12G" > /home/ost/programs/snap/bin/gpt.vmoptions
 #    ./${OTB} && \
 #    rm -f OTB-${OTB_VERSION}-Linux64.run
 
-USER $NB_UID
+# USER $NB_UID
 
 RUN conda install --quiet --yes --force-reinstall --update-all \
     oauthlib \
