@@ -146,6 +146,8 @@ def _map_asf_to_scihub_cat_response(asf_response):
                         product['polarization'] = product['polarization'].replace('+', ' ')
                     if 'startTime' == asf_key:
                         formated_product['acquisitiondate'] = product['startTime'].split('T')[0]
+                    if 'orbit' == asf_key:
+                        product['orbit'] = product['orbit'][0]
                     formated_product[scihub_key] = product[asf_key]
         acq_list.append(formated_product)
 
