@@ -67,12 +67,12 @@ def test_asf_download(s1_grd_notnr_ost_product, mirror=2):
 
 
 @pytest.mark.xfail(reason="This is currently not usually working, so allow to fail!!")
-def test_esa_scihub_download(s1_mai_2020_id,
+def test_esa_scihub_download(s1_mai_2021_id,
                              mirror=1
                              ):
     herbert_uname = HERBERT_USER['uname']
     herbert_password = HERBERT_USER['pword']
-    product = S1Scene(s1_mai_2020_id)
+    product = S1Scene(s1_mai_2021_id)
     df = pd.DataFrame({'identifier': [product.scene_id]})
     with TemporaryDirectory(dir=os.getcwd()) as temp:
         download_sentinel1(

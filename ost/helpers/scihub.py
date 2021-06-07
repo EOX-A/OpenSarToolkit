@@ -1,18 +1,19 @@
 import os
 import getpass
 import datetime
-import urllib
 import requests
 import tqdm.auto as tqdm
 from pathlib import Path
 import logging
 from shapely.wkt import loads
 from retry import retry
+from urllib import request
 
 from godale import Executor
 
 from ost.helpers.errors import DownloadError
 from ost.helpers import helpers as h
+from ost.helpers.settings import APIHUB_BASEURL
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ def ask_credentials():
     return uname, pword
 
 
-def connect(base_url='https://scihub.copernicus.eu/apihub/',
+def connect(base_url=APIHUB_BASEURL,
             uname=None,
             pword=None
             ):
@@ -59,11 +60,10 @@ def connect(base_url='https://scihub.copernicus.eu/apihub/',
         pword = getpass.getpass(' Your Copernicus Scihub Password:')
 
     # open a connection to the scihub
-    manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-    manager.add_password(None, base_url, uname, pword)
-    handler = urllib.request.HTTPBasicAuthHandler(manager)
-    opener = urllib.request.build_opener(handler)
-
+    manager = request.HTTPPasswordMgrWithPriorAuth()
+    manager.add_password(None, base_url, uname, pword, is_authenticated=True)
+    handler = request.ProxyBasicAuthHandler(manager)
+    opener = request.build_opener(handler)
     return opener
 
 
@@ -207,7 +207,7 @@ def create_query(satellite, aoi, toi, product_specs):
 
     '''
     # construct the final query
-    query = urllib.request.quote('{} AND {} AND {} AND {}'.format(
+    query = request.quote('{} AND {} AND {} AND {}'.format(
         satellite, product_specs, aoi, toi))
 
     return query

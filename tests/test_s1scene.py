@@ -5,7 +5,7 @@ from ost.s1.s1scene import Sentinel1Scene
 from ost.helpers.settings import HERBERT_USER
 
 
-def test_s1scene_metadata(s1_id, s1_mai_2020_id, grd_project_class):
+def test_s1scene_metadata(s1_id, s1_mai_2021_id, grd_project_class):
     s1 = Sentinel1Scene(s1_id)
     control_id = 'S1B_IW_GRDH_1SDV_20180813T054020_20180813T054045_012240_0168D6_B775'
     control_dict = {'Scene_Identifier':
@@ -25,7 +25,6 @@ def test_s1scene_metadata(s1_id, s1_mai_2020_id, grd_project_class):
     assert s1.scene_id == control_id
     s1.zip_annotation_get(download_dir=grd_project_class.download_dir)
     assert control_poly == s1.get_product_polygon(
-
         download_dir=grd_project_class.download_dir
     ).wkt
     s1._get_center_lat(
@@ -33,7 +32,7 @@ def test_s1scene_metadata(s1_id, s1_mai_2020_id, grd_project_class):
             download_dir=grd_project_class.download_dir
         )
     )
-    s1 = Sentinel1Scene(s1_mai_2020_id)
+    s1 = Sentinel1Scene(s1_mai_2021_id)
     s1.scihub_annotation_get(
         uname=HERBERT_USER['uname'],
         pword=HERBERT_USER['pword']
