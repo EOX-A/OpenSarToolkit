@@ -51,8 +51,6 @@ RUN echo "-Xmx12G" > /home/ost/programs/snap/bin/gpt.vmoptions
 #    ./${OTB} && \
 #    rm -f OTB-${OTB_VERSION}-Linux64.run
 
-USER $NB_UID
-
 RUN conda install --quiet --yes --force-reinstall --update-all \
     oauthlib \
     gdal \
@@ -69,6 +67,8 @@ RUN conda install --quiet --yes --force-reinstall --update-all \
     descartes && \
     conda clean --all -f -y && \
     fix-permissions $CONDA_DIR
+
+USER $NB_UID
 
 # jupyter geojson as regular user
 RUN jupyter labextension install @jupyterlab/geojson-extension

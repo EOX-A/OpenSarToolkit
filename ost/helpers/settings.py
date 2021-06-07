@@ -167,7 +167,8 @@ GPT_FILE = str(GPT_FILE)
 # get path to graph
 OST_ROOT = Path(importlib.util.find_spec('ost').submodule_search_locations[0])
 
-APIHUB_BASEURL = 'https://scihub.copernicus.eu/apihub/odata/v1/Products'
+APIHUB_BASEURL = 'https://apihub.copernicus.eu/apihub'
+APIHUB_QUERY_BASEURL = f'{APIHUB_BASEURL}/odata/v1/Products'
 # ---------------------------------------------------------------
 
 # ---------------------------------------------------------------

@@ -23,7 +23,8 @@ from shapely.geometry import Polygon, Point
 from ost.helpers import scihub, raster as ras
 from ost.s1.grd_to_ard import grd_to_ard
 from ost.s1.burst_batch import bursts_to_ards
-from ost.helpers.settings import APIHUB_BASEURL, check_ard_parameters
+from ost.helpers.settings import APIHUB_BASEURL, APIHUB_QUERY_BASEURL, \
+    check_ard_parameters
 from ost.s1 import burst_inventory
 from ost.s1.ard_to_rgb import ard_to_rgb, ard_to_thumbnail, \
     ard_slc_to_rgb, ard_slc_to_thumbnail
@@ -220,36 +221,23 @@ class Sentinel1Scene:
             )
         return path
 
+
     # scihub related
     def scihub_uuid(self, opener):
-
-        # construct the basic the url
         base_url = (
-            'https://scihub.copernicus.eu/apihub/odata/v1/Products?$filter='
+            f'{APIHUB_QUERY_BASEURL}?$filter='
         )
-
-        # request
         action = urllib.request.quote(f'Name eq \'{self.scene_id}\'')
 
         # construct the download url
         url = base_url + action
 
+        # DEBUG log
+        # logger.info(f"Quering {url}")
         try:
-            # get the request
             req = opener.open(url)
         except URLError as error:
-            if hasattr(error, 'reason'):
-                raise ConnectionError(
-                    'We failed to connect to the server. Reason: {}'.format(
-                    error.reason
-                    )
-                )
-            elif hasattr(error, 'code'):
-                raise ConnectionError(
-                    'The server couldnt fulfill the request. '
-                    'Error code: {}'.format(error.code)
-                )
-
+            raise error
         else:
             # write the request to to the response variable
             # (i.e. the xml coming back from scihub)
@@ -281,17 +269,7 @@ class Sentinel1Scene:
             # get the request
             req = opener.open(url)
         except URLError as error:
-            if hasattr(error, 'reason'):
-                raise ConnectionError(
-                    'We failed to connect to the server. Reason: {}'.format(
-                        error.reason
-                    )
-                )
-            elif hasattr(error, 'code'):
-                raise ConnectionError(
-                    'The server couldnt fulfill the request. '
-                    'Error code: {}'.format(error.code)
-                )
+            raise error
         else:
             # write the request to to the response variable
             # (i.e. the xml coming back from scihub)
@@ -343,25 +321,15 @@ class Sentinel1Scene:
 
         logger.info('Getting URLS of annotation files'
                     ' for S1 product: {}.'.format(self.scene_id))
-        scihub_url = 'https://scihub.copernicus.eu/apihub/odata/v1/Products'
         anno_path = ('(\'{}\')/Nodes(\'{}.SAFE\')/Nodes(\'annotation\')/'
                      'Nodes'.format(uuid, self.scene_id))
-        url = scihub_url + anno_path
+        url = APIHUB_QUERY_BASEURL + anno_path
+        # DEBUG log
+        # logger.info(f"Getting annotation via: {url}")
         try:
-            # get the request
             req = opener.open(url)
         except URLError as error:
-            if hasattr(error, 'reason'):
-                raise ConnectionError(
-                    'We failed to connect to the server. Reason: {}'.format(
-                        error.reason
-                    )
-                )
-            elif hasattr(error, 'code'):
-                raise ConnectionError(
-                    'The server couldnt fulfill the request. '
-                    'Error code: {}'.format(error.code)
-                )
+            raise error
         else:
             # write the request to to the response variable
             # (i.e. the xml coming back from scihub)
@@ -399,9 +367,9 @@ class Sentinel1Scene:
 
         # pol = root.find('adsHeader').find('polarisation').text
         swath = et_root.find('adsHeader').find('swath').text
-        lines_per_burst = np.int(et_root.find('swathTiming').find(
+        lines_per_burst = int(et_root.find('swathTiming').find(
             'linesPerBurst').text)
-        pixels_per_burst = np.int(et_root.find('swathTiming').find(
+        pixels_per_burst = int(et_root.find('swathTiming').find(
             'samplesPerBurst').text)
         burstlist = et_root.find('swathTiming').find('burstList')
         geolocation_grid = et_root.find('geolocationGrid')[0]
@@ -427,7 +395,7 @@ class Sentinel1Scene:
             if azi_anx_time > orbit_time:
                 azi_anx_time = np.mod(azi_anx_time, orbit_time)
 
-            azi_anx_time = np.int32(np.round(azi_anx_time * 10))
+            azi_anx_time = int(np.round(azi_anx_time * 10))
             try:
                 firstthis = first[firstline]
             except:
@@ -483,10 +451,8 @@ class Sentinel1Scene:
 
         gdf_final = gpd.GeoDataFrame(columns=column_names)
 
-        base_url = 'https://scihub.copernicus.eu/apihub/'
-
         # get connected to scihub
-        opener = scihub.connect(base_url, uname, pword)
+        opener = scihub.connect(APIHUB_BASEURL, uname, pword)
         anno_list = self._scihub_annotation_url(opener)
 
         for url in anno_list:
