@@ -225,7 +225,7 @@ def check_connection(uname, pword):
     '''
 
     # we use some random url for checking
-    url = ('https://scihub.copernicus.eu/apihub/odata/v1/Products?'
+    url = (f'{APIHUB_BASEURL}/odata/v1/Products?'
            '$select=Id&$filter=substringof(%27_20171113T010515_%27,Name)')
     response = requests.get(url, auth=(uname, pword))
     return response.status_code
@@ -262,7 +262,7 @@ def s1_download(argument_list):
         pword = getpass.getpass('Your Copernicus Scihub Password:')
 
     # define url
-    url = ('https://scihub.copernicus.eu/apihub/odata/v1/'
+    url = (f'{APIHUB_BASEURL}/odata/v1/'
            'Products(\'{}\')/$value'.format(uuid))
 
     # get first response for file Size

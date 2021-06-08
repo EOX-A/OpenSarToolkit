@@ -2,6 +2,14 @@
 Changelog
 #########
 
+------
+0.9.10 - 2021-06-08
+------
+* update Dockerfile
+* fix tests
+    * update scihub API hub Endpoint to **https://apihub.copernicus.eu/apihub**
+    * updated download test product from scihub to a 2021 product
+
 -----
 0.9.9
 -----
