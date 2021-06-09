@@ -10,7 +10,7 @@ from ost.helpers.scihub import check_connection as check_connection_scihub, \
     connect
 from ost.s1.download import download_sentinel1
 
-from ost.helpers.settings import HERBERT_USER
+from ost.helpers.settings import HERBERT_USER, APIHUB_BASEURL 
 
 
 def test_asf_connection():
@@ -33,7 +33,7 @@ def test_esa_scihub_connection(s1_grd_notnr_ost_product):
     control_code = 200
     assert response_code == control_code
     opener = connect(
-        base_url='https://scihub.copernicus.eu/apihub/',
+        base_url=APIHUB_BASEURL,
         uname=herbert_uname,
         pword=herbert_password
     )
