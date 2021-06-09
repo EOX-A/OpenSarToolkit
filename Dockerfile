@@ -68,7 +68,7 @@ RUN conda install --quiet --yes --force-reinstall --update-all \
     conda clean --all -f -y && \
     fix-permissions $CONDA_DIR
 
-USER $NB_UID
+# USER $NB_UID
 
 # jupyter geojson as regular user
 RUN jupyter labextension install @jupyterlab/geojson-extension
